@@ -206,9 +206,10 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
   },
   topRightLogo: {
     position: 'absolute',
-    top: getResponsivePadding(60),
-    right: getResponsivePadding(20),
+    top: getResponsivePadding(16),
+    right: getResponsivePadding(16),
     zIndex: 1,
+    pointerEvents: 'none',
   },
   studentIdLabel: {
     fontSize: getResponsiveFontSize(16),
@@ -220,20 +221,22 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     fontWeight: 'bold',
     color: colors.primary,
     letterSpacing: 2,
+    flexShrink: 1,
+    minWidth: 0,
   },
   balanceSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: getResponsivePadding(20),
-    // Better responsiveness for small screens
-    flexWrap: isSmallScreen ? 'wrap' : 'nowrap',
+    flexDirection: isSmallScreen ? 'column' : 'row',
+    alignItems: isSmallScreen ? 'stretch' : 'center',
+    justifyContent: isSmallScreen ? 'flex-start' : 'space-between',
+    gap: isSmallScreen ? getResponsivePadding(12) : getResponsivePadding(20),
+    flexWrap: 'nowrap',
   },
   balanceInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     // Allow balance info to grow on small screens
-    flex: isSmallScreen ? 1 : 0,
+    flex: isSmallScreen ? 0 : 0,
+    marginBottom: isSmallScreen ? getResponsivePadding(12) : 0,
   },
   balanceText: {
     fontSize: getResponsiveFontSize(24),
@@ -249,10 +252,13 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     paddingVertical: getResponsivePadding(12),
     paddingHorizontal: getResponsivePadding(20),
     borderRadius: getResponsiveSize(8),
+    alignItems: 'center',
     // Ensure button is not too small on mobile
     minWidth: getResponsiveSize(120),
     // Allow button to shrink on small screens if needed
     flexShrink: isSmallScreen ? 1 : 0,
+    alignSelf: isSmallScreen ? 'stretch' : 'flex-end',
+    marginTop: isSmallScreen ? getResponsivePadding(4) : 0,
   },
   topUpText: {
     color: 'white',
