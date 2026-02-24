@@ -225,21 +225,21 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     minWidth: 0,
   },
   balanceSection: {
-    flexDirection: isSmallScreen ? 'column' : 'row',
-    alignItems: isSmallScreen ? 'stretch' : 'center',
-    justifyContent: isSmallScreen ? 'flex-start' : 'space-between',
-    gap: isSmallScreen ? getResponsivePadding(12) : getResponsivePadding(20),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: getResponsivePadding(12),
     flexWrap: 'nowrap',
   },
   balanceInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    // Allow balance info to grow on small screens
-    flex: isSmallScreen ? 0 : 0,
-    marginBottom: isSmallScreen ? getResponsivePadding(12) : 0,
+    // Let the text take remaining space and shrink if needed
+    flex: 1,
+    minWidth: 0,
   },
   balanceText: {
-    fontSize: getResponsiveFontSize(24),
+    fontSize: getResponsiveFontSize(22),
     fontWeight: 'bold',
     color: colors.primary,
     marginLeft: getResponsivePadding(10),
@@ -250,15 +250,14 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
   topUpButton: {
     backgroundColor: colors.primary,
     paddingVertical: getResponsivePadding(12),
-    paddingHorizontal: getResponsivePadding(20),
+    paddingHorizontal: getResponsivePadding(18),
     borderRadius: getResponsiveSize(8),
     alignItems: 'center',
     // Ensure button is not too small on mobile
     minWidth: getResponsiveSize(120),
     // Allow button to shrink on small screens if needed
-    flexShrink: isSmallScreen ? 1 : 0,
-    alignSelf: isSmallScreen ? 'stretch' : 'flex-end',
-    marginTop: isSmallScreen ? getResponsivePadding(4) : 0,
+    flexShrink: 0,
+    alignSelf: 'auto',
   },
   topUpText: {
     color: 'white',

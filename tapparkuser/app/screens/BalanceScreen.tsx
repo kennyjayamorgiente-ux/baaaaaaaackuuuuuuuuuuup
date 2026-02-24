@@ -574,7 +574,12 @@ const BalanceScreen: React.FC = () => {
                   width={getResponsiveSize(32)}
                   height={getResponsiveSize(32)}
                 />
-                <Text style={balanceScreenStyles.balanceText}>
+                <Text
+                  style={balanceScreenStyles.balanceText}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                >
                   {subscriptionBalance ? `${formatHoursToHHMM(subscriptionBalance.total_hours_remaining || 0)} Tokens` : '0.00 Tokens'}
                 </Text>
               </View>
