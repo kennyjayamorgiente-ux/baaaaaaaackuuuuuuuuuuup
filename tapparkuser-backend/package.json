@@ -1,0 +1,60 @@
+{
+    "name":  "tapparkuser-backend",
+    "version":  "1.0.0",
+    "description":  "Backend API for Tapparkuser parking management application",
+    "main":  "server-fast.js",
+    "scripts":  {
+                    "start":  "node server-fast.js",
+                    "dev":  "nodemon server-fast.js",
+                    "fast":  "node server-fast.js",
+                    "fast-dev":  "nodemon server-fast.js",
+                    "list-db":  "node scripts/list-databases.js",
+                    "grace-period":  "node grace_period_checker.js",
+                    "add-paypal-transactions":  "node scripts/add-paypal-transactions.js",
+                    "check-types":  "node scripts/maintenance/check-types-table.js",
+                    "create-guest-bookings":  "node scripts/maintenance/create-guest-bookings-table.js",
+                    "harden-db":  "node scripts/maintenance/harden-db-integrity.js",
+                    "smoke-test":  "node scripts/maintenance/smoke-test.js",
+                    "predeploy-check":  "node scripts/maintenance/predeploy-check.js",
+                    "realtime-smoke-test":  "node scripts/maintenance/realtime-smoke-test.js"
+                },
+    "keywords":  [
+                     "parking",
+                     "api",
+                     "nodejs",
+                     "express",
+                     "mysql",
+                     "tapparkuser"
+                 ],
+    "author":  "Tapparkuser Team",
+    "license":  "MIT",
+    "dependencies":  {
+                         "axios":  "^1.13.2",
+                         "bcryptjs":  "^2.4.3",
+                         "cors":  "^2.8.5",
+                         "dotenv":  "^16.3.1",
+                         "express":  "^4.18.2",
+                         "express-rate-limit":  "^7.1.5",
+                         "express-validator":  "^7.0.1",
+                         "helmet":  "^7.1.0",
+                         "joi":  "^17.11.0",
+                         "jsonwebtoken":  "^9.0.2",
+                         "moment":  "^2.29.4",
+                         "multer":  "^1.4.5-lts.1",
+                         "mysql2":  "^3.6.5",
+                         "nodemailer":  "^7.0.13",
+                         "qrcode":  "^1.5.4",
+                         "socket.io":  "^4.8.3",
+                         "uuid":  "^9.0.1",
+                         "@socket.io/redis-adapter":  "^8.3.0",
+                         "redis":  "^4.7.1"
+                     },
+    "devDependencies":  {
+                            "nodemon":  "^3.0.2",
+                            "socket.io-client":  "^4.8.3"
+                        },
+    "engines":  {
+                    "node":  "\u003e=16.0.0"
+                }
+}
+
