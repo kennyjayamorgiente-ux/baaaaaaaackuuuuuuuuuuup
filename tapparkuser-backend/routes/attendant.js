@@ -22,44 +22,91 @@ router.get('/vehicle-types', authenticateToken, async (req, res) => {
   try {
     console.log('📊 Fetching vehicle types data...');
 
-    // Query to get vehicle type statistics
-    const query = `
+    const spotQuery = `
       SELECT 
         ps.spot_type as vehicle_type,
         COUNT(*) as total_capacity,
         SUM(CASE WHEN ps.status = 'occupied' THEN 1 ELSE 0 END) as occupied,
-        SUM(CASE WHEN ps.status = 'available' THEN 1 ELSE 0 END) as vacant,
         SUM(CASE WHEN ps.status = 'reserved' THEN 1 ELSE 0 END) as reserved
       FROM parking_spot ps
       INNER JOIN parking_section psec ON ps.parking_section_id = psec.parking_section_id
       INNER JOIN parking_area pa ON psec.parking_area_id = pa.parking_area_id
       WHERE pa.status = 'active'
       GROUP BY ps.spot_type
-      ORDER BY 
-        CASE ps.spot_type 
-          WHEN 'car' THEN 1
-          WHEN 'motorcycle' THEN 2
-          WHEN 'bike' THEN 3
-          ELSE 4
-        END
+    `;
+    const sectionQuery = `
+      SELECT 
+        ps.vehicle_type as vehicle_type,
+        SUM(ps.capacity) as total_capacity,
+        SUM(ps.parked_count) as occupied,
+        SUM(ps.reserved_count) as reserved
+      FROM parking_section ps
+      INNER JOIN parking_area pa ON ps.parking_area_id = pa.parking_area_id
+      WHERE pa.status = 'active'
+        AND ps.section_mode = 'capacity_only'
+        AND ps.status != 'unavailable'
+      GROUP BY ps.vehicle_type
     `;
 
-    const results = await db.query(query);
-    
-    console.log(`Found ${results.length} vehicle types:`);
-    results.forEach(type => {
-      console.log(`  - ${type.vehicle_type}: Total: ${type.total_capacity}, Occupied: ${type.occupied}, Vacant: ${type.vacant}, Reserved: ${type.reserved}`);
+    const spotResults = await db.query(spotQuery);
+    const sectionResults = await db.query(sectionQuery);
+
+    const normalizeType = (t) => {
+      if (!t) return null;
+      const lower = String(t).toLowerCase();
+      if (lower === 'bicycle' || lower === 'bike' || lower === 'ebike' || lower === 'e-bike') return 'bike';
+      if (lower === 'motorbike') return 'motorcycle';
+      return lower;
+    };
+
+    const agg = new Map();
+    const addAgg = (rawType, total, occupied, reserved) => {
+      const type = normalizeType(rawType);
+      if (!type) return;
+      const prev = agg.get(type) || { total: 0, occupied: 0, reserved: 0 };
+      agg.set(type, {
+        total: (prev.total || 0) + (Number(total) || 0),
+        occupied: (prev.occupied || 0) + (Number(occupied) || 0),
+        reserved: (prev.reserved || 0) + (Number(reserved) || 0),
+      });
+    };
+
+    (spotResults || []).forEach(row => {
+      addAgg(row.vehicle_type, row.total_capacity, row.occupied, row.reserved);
+    });
+    (sectionResults || []).forEach(row => {
+      addAgg(row.vehicle_type, row.total_capacity, row.occupied, row.reserved);
     });
 
-    // Format the response to match the frontend expectations
-    const vehicleTypes = results.map(type => ({
-      id: type.vehicle_type,
-      name: type.vehicle_type.charAt(0).toUpperCase() + type.vehicle_type.slice(1),
-      totalCapacity: parseInt(type.total_capacity),
-      occupied: parseInt(type.occupied),
-      available: parseInt(type.vacant),
-      reserved: parseInt(type.reserved)
-    }));
+    const orderIndex = (t) => {
+      if (t === 'car') return 1;
+      if (t === 'motorcycle') return 2;
+      if (t === 'bike') return 3;
+      return 99;
+    };
+
+    const vehicleTypes = Array.from(agg.entries())
+      .map(([type, vals]) => {
+        const totalCapacity = Number(vals.total) || 0;
+        const occupied = Number(vals.occupied) || 0;
+        const reserved = Number(vals.reserved) || 0;
+        const available = Math.max(totalCapacity - occupied - reserved, 0);
+        return {
+          id: type,
+          name: type.charAt(0).toUpperCase() + type.slice(1),
+          totalCapacity,
+          occupied,
+          reserved,
+          available,
+          _order: orderIndex(type),
+        };
+      })
+      .filter(v => v.totalCapacity > 0)
+      .sort((a, b) => {
+        if (a._order !== b._order) return a._order - b._order;
+        return a.name.localeCompare(b.name);
+      })
+      .map(({ _order, ...rest }) => rest);
 
     res.json({
       success: true,
@@ -1015,8 +1062,18 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
 
     const balanceHours = subscriptionHours[0]?.total_hours_remaining || 0;
 
-    // Calculate charge (hours used)
-    const chargeHours = durationHours;
+    // Calculate charge using active vehicle-type token rate (tokens per hour)
+    const rateRows = await db.query(`
+      SELECT deduction_rate
+      FROM vehicle_type_deduction_rates
+      WHERE vehicle_type_id = ? AND is_active = 1
+      ORDER BY updated_at DESC, created_at DESC
+      LIMIT 1
+    `, [reservationData.vehicle_type_id]);
+    const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
+    const fallbackRate = 0;
+    const hourlyRateUsed = typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : fallbackRate;
+    const chargeHours = durationHours * hourlyRateUsed;
 
     // Get active subscription BEFORE updating (to ensure we have the right data)
     const activeSubscription = await db.query(`
@@ -1152,14 +1209,14 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
 
     const verifiedBalanceHours = updatedSubscriptionHours[0]?.total_hours_remaining || 0;
     
-    console.log(`✅ ${reservationData.booking_status === 'reserved' ? 'Reserved parking ended directly' : 'Active parking session ended'} - Deducted ${hoursToDeduct} hours. Balance: ${balanceHours} -> ${verifiedBalanceHours}`);
+    console.log(`✅ ${reservationData.booking_status === 'reserved' ? 'Reserved parking ended directly' : 'Active parking session ended'} - Deducted ${hoursToDeduct} tokens (rate ${hourlyRateUsed}/h). Balance: ${balanceHours} -> ${verifiedBalanceHours}`);
     console.log(`📝 Attendant log recorded: Staff ${req.user.user_id} scanned END for ${reservationData.user_name} (${reservationData.booking_status})`);
 
     // Log parking end from user's perspective
     await logUserActivity(
       reservationData.user_id,
       ActionTypes.PARKING_END,
-      `${reservationData.booking_status === 'reserved' ? 'Reserved parking' : 'Parking session'} ended by attendant: Spot ${reservationData.spot_number} at ${reservationData.parking_area_name}. Duration: ${durationHours} hours, ${hoursToDeduct} hours deducted`,
+      `${reservationData.booking_status === 'reserved' ? 'Reserved parking' : 'Parking session'} ended by attendant: Spot ${reservationData.spot_number} at ${reservationData.parking_area_name}. Duration: ${durationHours} hours, ${hoursToDeduct} tokens deducted (rate ${hourlyRateUsed}/h)`,
       reservationData.reservation_id
     );
 
@@ -1883,6 +1940,37 @@ router.put('/end-parking-session/:reservationId', authenticateToken, validatePar
       await connection.commit();
       connection.release();
 
+      // Compute duration and token rate for response
+      const [durationRow] = await db.query(`
+        SELECT 
+          ROUND(TIMESTAMPDIFF(SECOND, r.start_time, NOW()) / 3600, 4) AS total_hours,
+          v.vehicle_type, vt.vehicle_type_id
+        FROM reservations r
+        JOIN vehicles v ON r.vehicle_id = v.vehicle_id
+        JOIN vehicle_types vt ON v.vehicle_type = vt.vehicle_type_name
+        WHERE r.reservation_id = ?
+        LIMIT 1
+      `, [reservationId]);
+      const durationHours = Number(durationRow?.total_hours || 0);
+      const vehicleTypeId = Number(durationRow?.vehicle_type_id || 0);
+      const rateRows = await db.query(`
+        SELECT deduction_rate
+        FROM vehicle_type_deduction_rates
+        WHERE vehicle_type_id = ? AND is_active = 1
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+      `, [vehicleTypeId]);
+      const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
+      const vtRows = await db.query(`
+        SELECT vehicle_type_deduction_rate
+        FROM vehicle_types
+        WHERE vehicle_type_id = ?
+        LIMIT 1
+      `, [vehicleTypeId]);
+      const fallbackRate = vtRows.length > 0 ? Number(vtRows[0].vehicle_type_deduction_rate) : 0;
+      const hourlyRateUsed = typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : fallbackRate;
+      const tokensDeducted = +(durationHours * hourlyRateUsed).toFixed(2);
+
       // Log activity
       await logUserActivity(
         req.user.user_id,
@@ -1913,7 +2001,10 @@ router.put('/end-parking-session/:reservationId', authenticateToken, validatePar
         data: {
           reservationId: parseInt(reservationId),
           status: 'completed',
-          spotFreed: true
+          spotFreed: true,
+          durationHours,
+          hourlyRateUsed,
+          tokensDeducted
         }
       });
 

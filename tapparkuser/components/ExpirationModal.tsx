@@ -170,6 +170,19 @@ const ExpirationModal: React.FC<ExpirationModalProps> = ({ styles }) => {
                     {formatChargedHours(expirationDetails.billingBreakdown.totalChargedHours)}
                   </Text>
                 </View>
+                {typeof (expirationDetails.billingBreakdown as any).tokensCharged === 'number' && (
+                  <View style={modalStyles.billingRow}>
+                    <Text style={modalStyles.billingLabel}>Tokens Deducted</Text>
+                    <Text style={modalStyles.billingValue}>
+                      {Number((expirationDetails.billingBreakdown as any).tokensCharged).toFixed(2)} Tokens
+                    </Text>
+                  </View>
+                )}
+                {typeof (expirationDetails.billingBreakdown as any).hourlyRateUsed === 'number' && (
+                  <Text style={modalStyles.formula}>
+                    Rate: {Number((expirationDetails.billingBreakdown as any).hourlyRateUsed).toFixed(2)} tokens/hour
+                  </Text>
+                )}
                 {expirationDetails.billingBreakdown.breakdown && (
                   <Text style={modalStyles.formula}>
                     {expirationDetails.billingBreakdown.breakdown}

@@ -1264,20 +1264,50 @@ router.get('/booking/:reservationId', authenticateToken, async (req, res) => {
           const data = Array.isArray(durationData) ? durationData[0] : durationData;
 
           try {
-            const waitTime = parseFloat(data.wait_hours);
-            const waitHours = Math.floor(waitTime);
-            const waitMinutes = Math.round((waitTime - waitHours) * 60);
-            const totalChargedHours = waitHours + waitMinutes / 100;
+            const waitTime = parseFloat(data.wait_hours); // decimal hours
+            const waitMinutes = Math.round(waitTime * 60);
+            const parkingMinutes = 0;
+            const totalChargedMinutes = waitMinutes + parkingMinutes;
+            const totalChargedHours = totalChargedMinutes / 60;
 
             billingBreakdown = {
-              waitTimeHours: waitHours,
+              waitTimeHours: waitMinutes / 60,
               waitTimeMinutes: waitMinutes,
-              parkingTimeHours: 0,
-              parkingTimeMinutes: 0,
+              parkingTimeHours: parkingMinutes / 60,
+              parkingTimeMinutes: parkingMinutes,
               totalChargedHours,
-              totalChargedMinutes: waitMinutes,
-              breakdown: `Wait time: ${waitHours}h ${waitMinutes}m + Parking time: 0h 0m = ${totalChargedHours} charged`
+              totalChargedMinutes,
+              breakdown: `Wait time: ${waitMinutes} min + Parking time: ${parkingMinutes} min = ${totalChargedMinutes} min total (${totalChargedHours.toFixed(2)} h)`
             };
+            
+            // Compute tokens charged using active vehicle-type rate
+            try {
+              const [vtIdRow] = await db.query(`
+                SELECT vehicle_type_id
+                FROM vehicle_types
+                WHERE vehicle_type_name = ?
+                LIMIT 1
+              `, [booking.vehicle_type]);
+              const vehicleTypeId = vtIdRow?.vehicle_type_id;
+              let hourlyRateUsed = 0;
+              if (vehicleTypeId) {
+                const rateRows = await db.query(`
+                  SELECT deduction_rate
+                  FROM vehicle_type_deduction_rates
+                  WHERE vehicle_type_id = ? AND is_active = 1
+                  ORDER BY updated_at DESC, created_at DESC
+                  LIMIT 1
+                `, [vehicleTypeId]);
+                if (rateRows.length > 0) {
+                  hourlyRateUsed = Number(rateRows[0].deduction_rate) || 0;
+                }
+              }
+              billingBreakdown.hourlyRateUsed = hourlyRateUsed;
+              billingBreakdown.tokensCharged = Number((totalChargedHours * hourlyRateUsed).toFixed(2));
+            } catch (rateErr) {
+              // Fallback: tokens equal to hours
+              billingBreakdown.tokensCharged = Number((totalChargedHours).toFixed(2));
+            }
 
             if (!alreadyProcessedExpired) {
               try {

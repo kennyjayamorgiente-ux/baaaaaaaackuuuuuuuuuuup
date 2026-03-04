@@ -416,29 +416,28 @@ router.post('/end/:sessionId', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get vehicle type deduction rate
-    const rateInfo = await db.query(`
-      SELECT deduction_rate
-      FROM vehicle_type_deduction_rates
-      WHERE vehicle_type_id = ? AND is_active = 1
-    `, [session.vehicle_type_id]);
-    
-    if (rateInfo.length === 0) {
-      return res.status(500).json({
-        success: false,
-        message: 'Vehicle type rate not found'
-      });
-    }
-    
-    const hourlyRate = rateInfo[0].deduction_rate;
+    const session = sessions[0];
+    // Prefer active rate from vehicle_type_deduction_rates; fallback to vehicle_types.hourly_rate
+    const rateRows = await db.query(
+      `
+        SELECT deduction_rate
+        FROM vehicle_type_deduction_rates
+        WHERE vehicle_type_id = ? AND is_active = 1
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+      `,
+      [session.vehicle_type_id]
+    );
+    const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
+    const hourlyRate = typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : 0;
     const endTime = new Date();
     const startTime = new Date(session.start_time);
     
     // Calculate raw duration in seconds
     const durationSeconds = Math.floor((endTime - startTime) / 1000);
     
-    // Convert to minutes - any partial minute counts as full minute (1 token = 1 minute)
-    const billableMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
+    // Convert to minutes with 2-minute minimum; round up to whole minute
+    const billableMinutes = Math.max(2, Math.ceil(durationSeconds / 60));
     
     // Calculate rate per minute and total cost
     const ratePerMinute = hourlyRate / 60;
@@ -534,7 +533,7 @@ router.post('/end/:sessionId', authenticateToken, async (req, res) => {
           INSERT INTO penalty (user_id, penalty_time)
           VALUES (?, ?)
         `,
-        params: [req.user.user_id, penaltyMinutes / 60] // Store penalty in hours for compatibility
+        params: [req.user.user_id, penaltyMinutes] // Store penalty in minutes
       });
     }
 
@@ -574,6 +573,7 @@ router.post('/end/:sessionId', authenticateToken, async (req, res) => {
           billableMinutes,
           billableHours,
           totalCost,
+          hourlyRateUsed: hourlyRate,
           endTime: endTime.toISOString(),
           paymentMethod,
           hoursDeducted: hoursToDeduct,

@@ -87,12 +87,9 @@ const getResponsiveMargin = (baseMargin: number) => {
 };
 
 
-// Helper function to format decimal hours to HH.MM format (e.g., 83.5 -> "83.30")
 const formatHoursToHHMM = (decimalHours: number): string => {
-  if (!decimalHours || decimalHours === 0) return '0.00';
-  const hours = Math.floor(decimalHours);
-  const minutes = Math.round((decimalHours - hours) * 60);
-  return `${hours}.${minutes.toString().padStart(2, '0')}`;
+  const val = Number(decimalHours) || 0;
+  return val.toFixed(2);
 };
 
 const BalanceScreen: React.FC = () => {
@@ -110,6 +107,10 @@ const BalanceScreen: React.FC = () => {
   const [isTransactionModalVisible, setIsTransactionModalVisible] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [signFilter, setSignFilter] = useState<'all' | 'credit' | 'debit'>('all');
+  const [mergedTransactions, setMergedTransactions] = useState<any[]>([]);
+  const [creditTransactions, setCreditTransactions] = useState<any[]>([]);
+  const [debitTransactions, setDebitTransactions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | '7days' | 'month' | 'year' | 'lastyear' | 'custom'>('all');
   const [isFilterDropdownVisible, setIsFilterDropdownVisible] = useState(false);
@@ -178,7 +179,7 @@ const BalanceScreen: React.FC = () => {
         setSubscriptionBalance(subscriptionResponse.data);
       }
 
-      // Load payment history (transactions) using AJAX
+      // Load payment history (subscription top-ups)
       console.log('🔄 Loading payment history...');
       const transactionsResponse = await ApiService.getPaymentHistory(1, 20);
       console.log('📊 Transactions response:', transactionsResponse);
@@ -201,11 +202,49 @@ const BalanceScreen: React.FC = () => {
             });
           });
         }
-        
-        setTransactions(transactionsResponse.data.payments || []);
+
+        const paymentTransactions = transactionsResponse.data.payments || [];
+
+        // Load parking history and map token deductions to transactions
+        console.log('🔄 Loading parking history for token deductions...');
+        const parkingHistoryResponse = await ApiService.getParkingHistory(1, 20);
+        const parkingSessions = parkingHistoryResponse.success ? (parkingHistoryResponse.data.sessions || []) : [];
+        console.log('📊 Parking sessions loaded:', parkingSessions.length);
+
+        const parkingTransactions = parkingSessions
+          .filter((s: any) => (s.hours_deducted || (s.billingBreakdown?.totalChargedHours ?? 0)) > 0)
+          .map((s: any) => {
+            const hours = s.hours_deducted ?? (s.billingBreakdown?.totalChargedHours ?? 0);
+            // Use end_time if present, otherwise waiting_end_time, else time_stamp
+            const created_at = s.end_time || s.waiting_end_time || s.time_stamp;
+            return {
+              type: 'parking',
+              payment_id: `park-${s.reservation_id}`,
+              created_at,
+              status: 'completed',
+              location_name: s.location_name,
+              spot_number: s.spot_number,
+              hours_deducted: hours,
+            };
+          });
+
+        // Merge and sort by created_at descending
+        const merged = [...paymentTransactions, ...parkingTransactions].sort((a: any, b: any) => {
+          const da = new Date(a.created_at || a.payment_date || a.timestamp || a.time_stamp).getTime();
+          const db = new Date(b.created_at || b.payment_date || b.timestamp || b.time_stamp).getTime();
+          return db - da;
+        });
+
+        setTransactions(merged);
+        setMergedTransactions(merged);
+        setCreditTransactions(merged.filter(t => getTransactionSign(t) === 'credit'));
+        setDebitTransactions(merged.filter(t => getTransactionSign(t) === 'debit'));
       } else {
         console.error('❌ Failed to load transactions:', transactionsResponse.message);
         setTransactions([]);
+        setMergedTransactions([]);
+        setCreditTransactions([]);
+        setDebitTransactions([]);
       }
     } catch (error) {
       console.error('Error loading balance data:', error);
@@ -244,8 +283,10 @@ const BalanceScreen: React.FC = () => {
     
     if (transaction.type === 'parking') {
       // For parking sessions, show hours deducted
-      const hoursDeducted = transaction.hours_deducted || 0;
-      return `- ${formatHoursToHHMM(hoursDeducted)} Token`;
+      const tokensDeducted = typeof transaction.tokens_deducted === 'number'
+        ? transaction.tokens_deducted
+        : (transaction.hours_deducted || 0);
+      return `- ${formatHoursToHHMM(tokensDeducted)} Token`;
     } else if (transaction.payment_type === 'subscription') {
       // For subscription purchases - RELY ON number_of_hours from plans table
       const hours = transaction.number_of_hours;
@@ -258,6 +299,19 @@ const BalanceScreen: React.FC = () => {
       // Other payment types
       return `- ${transaction.amount || 0}`;
     }
+  };
+
+  const getTransactionSign = (transaction: any): 'credit' | 'debit' => {
+    if (transaction.type === 'parking') {
+      return 'debit';
+    }
+    if (transaction.payment_type === 'subscription') {
+      return 'credit';
+    }
+    if (typeof transaction.number_of_hours === 'number' && transaction.number_of_hours > 0) {
+      return 'credit';
+    }
+    return 'debit';
   };
 
   // Get subscription plan name
@@ -276,6 +330,18 @@ const BalanceScreen: React.FC = () => {
     }
   };
 
+  const formatDurationText = (transaction: any) => {
+    const minutes =
+      (transaction?.billingBreakdown?.totalChargedMinutes as number) ??
+      (typeof transaction?.duration_minutes === 'number' ? transaction.duration_minutes : undefined) ??
+      (typeof transaction?.hours_deducted === 'number' ? Math.round(transaction.hours_deducted * 60) : 0);
+    const mins = Math.max(0, minutes || 0);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h > 0 && m > 0) return `${h} hr ${m} min`;
+    if (h > 0) return `${h} hr`;
+    return `${m} min`;
+  };
   // Handle transaction selection and open modal
   const handleTransactionPress = (transaction: any) => {
     setSelectedTransaction(transaction);
@@ -356,7 +422,16 @@ const BalanceScreen: React.FC = () => {
     const customEnd = parseInputDate(customEndDate);
     const customEndInclusive = customEnd ? new Date(customEnd.getTime() + (24 * 60 * 60 * 1000) - 1) : null;
 
-    return transactions.filter((transaction) => {
+    const base =
+      signFilter === 'credit'
+        ? creditTransactions
+        : signFilter === 'debit'
+        ? debitTransactions
+        : mergedTransactions.length > 0
+        ? mergedTransactions
+        : transactions;
+
+    return base.filter((transaction) => {
       const searchable = [
         String(transaction.payment_id || ''),
         transaction.payment_type || '',
@@ -370,6 +445,11 @@ const BalanceScreen: React.FC = () => {
 
       const matchesSearch = !lowerQuery || searchable.includes(lowerQuery);
       if (!matchesSearch) return false;
+
+      if (signFilter !== 'all') {
+        const sign = getTransactionSign(transaction);
+        if (signFilter !== sign) return false;
+      }
 
       if (dateFilter === 'all') return true;
       const recordDate = parseTransactionDate(transaction);
@@ -402,7 +482,13 @@ const BalanceScreen: React.FC = () => {
 
       return true;
     });
-  }, [transactions, searchQuery, dateFilter, customStartDate, customEndDate]);
+  }, [transactions, mergedTransactions, creditTransactions, debitTransactions, searchQuery, dateFilter, customStartDate, customEndDate, signFilter]);
+
+  React.useEffect(() => {
+    if (filteredTransactions.length > 0) {
+      contentScrollRef.current?.scrollTo({ y: 0, animated: true });
+    }
+  }, [signFilter]);
 
   const applyCustomDateFilter = () => {
     const start = parseInputDate(customStartDate);
@@ -649,6 +735,62 @@ const BalanceScreen: React.FC = () => {
                     ]}
                   >
                     Grid
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={balanceScreenStyles.viewToggleContainer}>
+                <TouchableOpacity
+                  style={[
+                    balanceScreenStyles.viewToggleButton,
+                    signFilter === 'all' && balanceScreenStyles.viewToggleButtonActive,
+                  ]}
+                  onPress={() => setSignFilter('all')}
+                >
+                  <Ionicons name="git-branch-outline" size={16} color={signFilter === 'all' ? '#FFFFFF' : colors.primary} />
+                  <Text
+                    style={[
+                      balanceScreenStyles.viewToggleText,
+                      signFilter === 'all' && balanceScreenStyles.viewToggleTextActive,
+                    ]}
+                  >
+                    All
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    balanceScreenStyles.viewToggleButton,
+                    signFilter === 'credit' && balanceScreenStyles.viewToggleButtonActive,
+                  ]}
+                  onPress={() => setSignFilter('credit')}
+                >
+                  <Ionicons name="add-circle" size={16} color={signFilter === 'credit' ? '#FFFFFF' : colors.primary} />
+                  <Text
+                    style={[
+                      balanceScreenStyles.viewToggleText,
+                      signFilter === 'credit' && balanceScreenStyles.viewToggleTextActive,
+                    ]}
+                  >
+                    + Tokens
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    balanceScreenStyles.viewToggleButton,
+                    signFilter === 'debit' && balanceScreenStyles.viewToggleButtonActive,
+                  ]}
+                  onPress={() => setSignFilter('debit')}
+                >
+                  <Ionicons name="remove-circle" size={16} color={signFilter === 'debit' ? '#FFFFFF' : colors.primary} />
+                  <Text
+                    style={[
+                      balanceScreenStyles.viewToggleText,
+                      signFilter === 'debit' && balanceScreenStyles.viewToggleTextActive,
+                    ]}
+                  >
+                    - Tokens
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -946,10 +1088,10 @@ const BalanceScreen: React.FC = () => {
                         <Text style={balanceScreenStyles.detailValue}>{selectedTransaction.spot_number}</Text>
                       </View>
                     )}
-                    {selectedTransaction.hours_deducted && (
+                    {(selectedTransaction.billingBreakdown?.totalChargedMinutes || selectedTransaction.hours_deducted) && (
                       <View style={balanceScreenStyles.detailRow}>
                         <Text style={balanceScreenStyles.detailLabel}>Hours Used:</Text>
-                        <Text style={balanceScreenStyles.detailValue}>{formatHoursToHHMM(selectedTransaction.hours_deducted)} Tokens</Text>
+                        <Text style={balanceScreenStyles.detailValue}>{formatDurationText(selectedTransaction)}</Text>
                       </View>
                     )}
                   </>

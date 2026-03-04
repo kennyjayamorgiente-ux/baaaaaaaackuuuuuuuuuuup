@@ -10,7 +10,7 @@ class Database {
       port: process.env.DB_PORT || 3306,
       user: process.env.DB_USER || 'root',
       password: '',
-      database: process.env.DB_NAME || 'merge2', // Use environment variable for database name
+      database: process.env.DB_NAME || 'merge2-latest', // Use environment variable for database name
       waitForConnections: true,
       connectionLimit: 20,
       queueLimit: 100,

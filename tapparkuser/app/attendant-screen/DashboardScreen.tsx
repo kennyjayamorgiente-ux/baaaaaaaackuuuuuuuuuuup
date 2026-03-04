@@ -174,6 +174,7 @@ const DashboardScreen: React.FC = () => {
 
   // Keep latest sectionSpots for polling (avoid stale closure)
   const sectionSpotsRef = useRef<{[key: number]: any[]}>({});
+  const capacityLoadedRef = useRef<boolean>(false);
   
   // Activity history state
   const [activityRecords, setActivityRecords] = useState<ActivityRecord[]>([]);
@@ -189,6 +190,8 @@ const DashboardScreen: React.FC = () => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const assignedAreaIdRef = useRef<number | null>(null);
   const guestBookingScrollRef = useRef<ScrollView>(null);
+  const isUpdatingRef = useRef<boolean>(false);
+  const pollingTimerRef = useRef<any>(null);
 
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) return error.message;
@@ -861,7 +864,14 @@ const DashboardScreen: React.FC = () => {
             try {
               const response = await ApiService.endParkingSessionByAdmin(reservationId);
               if (response.success) {
-                Alert.alert('Success', 'Parking session ended successfully', [
+                const details = response.data || {};
+                const duration = typeof details.durationHours === 'number' ? details.durationHours.toFixed(2) : undefined;
+                const tokens = typeof details.tokensDeducted === 'number' ? details.tokensDeducted.toFixed(2) : undefined;
+                const rateUsed = typeof details.hourlyRateUsed === 'number' ? details.hourlyRateUsed.toFixed(2) : undefined;
+                const msg = duration && tokens
+                  ? `Parking session ended successfully.\n\nDuration: ${duration} hours\nTokens Deducted: ${tokens}${rateUsed ? `\nRate: ${rateUsed} tokens/hour` : ''}`
+                  : 'Parking session ended successfully';
+                Alert.alert('Success', msg, [
                   {
                     text: 'OK',
                     onPress: () => {
@@ -1131,6 +1141,7 @@ const DashboardScreen: React.FC = () => {
         }));
         console.log('📊 Normalized capacity sections:', normalizedSections);
         setCapacitySections(normalizedSections);
+        capacityLoadedRef.current = true;
         setSectionUnavailableCounts(prev => {
           const next = { ...prev };
           normalizedSections.forEach((section: any) => {
@@ -1391,7 +1402,7 @@ const DashboardScreen: React.FC = () => {
     
     if (hasChanges) {
       console.log('📊 Vehicle type counts have changes, updating smoothly...');
-      return currentTypes.map(type => {
+      let updated = currentTypes.map(type => {
         const vehicleTypeKey = type.name.toLowerCase().trim();
         const counts = realTimeCounts[vehicleTypeKey] || { total: 0, occupied: 0, available: 0, reserved: 0 };
         
@@ -1402,9 +1413,24 @@ const DashboardScreen: React.FC = () => {
           available: counts.available,
         };
       });
+      // Add any new types that appeared in realtime counts (e.g., capacity sections loaded)
+      const existingKeys = new Set(updated.map(t => t.name.toLowerCase().trim()));
+      Object.entries(realTimeCounts).forEach(([key, counts]) => {
+        if (!existingKeys.has(key) && (counts.total || 0) > 0) {
+          updated.push({
+            id: key,
+            name: key.charAt(0).toUpperCase() + key.slice(1),
+            icon: key,
+            totalCapacity: counts.total || 0,
+            occupied: counts.occupied || 0,
+            available: counts.available || 0,
+          });
+        }
+      });
+      return capacityLoadedRef.current ? updated.filter(t => (t.totalCapacity || 0) > 0) : updated;
     } else {
       console.log('📊 No vehicle type count changes detected, skipping update');
-      return currentTypes;
+      return capacityLoadedRef.current ? currentTypes.filter(t => (t.totalCapacity || 0) > 0) : currentTypes;
     }
   };
 
@@ -1568,6 +1594,31 @@ const DashboardScreen: React.FC = () => {
     };
   }, [attendantProfile?.assignedAreaId, user?.user_id]);
 
+  // IoT-friendly 3s polling for status updates
+  useEffect(() => {
+    if (loading) return;
+    // Clear any existing timer before starting a new one
+    if (pollingTimerRef.current) {
+      clearInterval(pollingTimerRef.current);
+      pollingTimerRef.current = null;
+    }
+    pollingTimerRef.current = setInterval(async () => {
+      if (isUpdatingRef.current) return;
+      isUpdatingRef.current = true;
+      try {
+        await updateParkingSlotsSmoothly();
+      } finally {
+        isUpdatingRef.current = false;
+      }
+    }, 3000);
+    return () => {
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+    };
+  }, [loading]);
+
   const handleLogout = () => {
     Alert.alert(
       'Log Out',
@@ -1656,14 +1707,9 @@ const DashboardScreen: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    console.log('🎨 getStatusColor called with:', { 
-      status, 
-      type: typeof status, 
-      length: status?.length,
-      json: JSON.stringify(status),
-      'status === "unavailable"': status === 'unavailable',
-      'status === "UNAVAILABLE"': status === 'UNAVAILABLE'
-    });
+    if (!status || !status.trim()) {
+      return '#60FF84';
+    }
     switch (status) {
       case 'available':
       case 'active': // Database uses 'available' for vacant spots
@@ -1673,14 +1719,11 @@ const DashboardScreen: React.FC = () => {
       case 'reserved':
         return '#FFF9A6'; // Yellow
       case 'unavailable':
-        console.log('✅ Matched unavailable case, returning gray');
         return '#8E8E93'; // Gray for unavailable
       case 'UNAVAILABLE':
-        console.log('✅ Matched UNAVAILABLE case, returning gray');
         return '#8E8E93'; // Gray for unavailable
       default:
-        console.log('⚠️ Unknown status in getStatusColor, using default gray:', status);
-        return '#8E8E93'; // Gray
+        return '#60FF84'; // Default to green for unknown/empty values
     }
   };
 
@@ -2844,6 +2887,51 @@ const DashboardScreen: React.FC = () => {
     );
   };
 
+  const renderVehicleTypeGroup = (type: string) => {
+    const normalizedType = normalizeVehicleType(type);
+    if (!normalizedType || normalizedType === 'unknown') return null;
+
+    if (normalizedType === 'car') {
+      const carSlots = parkingSlots.filter(slot => normalizeVehicleType(slot.vehicleType) === 'car');
+      const sectionsWithSlots = [...new Set(carSlots.map(slot => slot.section))];
+      if (sectionsWithSlots.length === 0) return null;
+      return (
+        <View style={{ marginTop: getAdaptiveSpacing(screenDimensions, 12) }}>
+          <Text style={[styles.sectionTitle, { fontSize: getAdaptiveFontSize(screenDimensions, 16) }]}>
+            Cars Parking Sections
+          </Text>
+          {viewMode === 'list'
+            ? sectionsWithSlots.map(section => renderSectionList(section, carSlots))
+            : sectionsWithSlots.map(section => renderSection(section, carSlots))}
+        </View>
+      );
+    }
+
+    if (normalizedType === 'motorcycle' || normalizedType === 'bike') {
+      const sectionsToShow = capacitySections.filter(
+        section => normalizeVehicleType(section.vehicleType) === normalizedType
+      );
+      if (sectionsToShow.length === 0) return null;
+      return (
+        <View style={{ marginTop: getAdaptiveSpacing(screenDimensions, 12) }}>
+          <Text style={[styles.sectionTitle, { fontSize: getAdaptiveFontSize(screenDimensions, 16) }]}>
+            {normalizedType === 'bike' ? 'Bicycle Parking Sections' : 'Motorcycle Parking Sections'}
+          </Text>
+          <View style={{
+            flexDirection: screenDimensions.isLandscape ? 'row' : 'column',
+            flexWrap: screenDimensions.isLandscape ? 'wrap' : 'nowrap',
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
+          }}>
+            {sectionsToShow.map(section => renderSection(section.sectionName))}
+          </View>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
 
   // Loading state
   if (loading) {
@@ -3010,34 +3098,18 @@ const DashboardScreen: React.FC = () => {
           {/* Parking Slots Grid/List */}
           <View style={styles.parkingSlotsContainer}>
             {(() => {
-                          const capacityVehicleTypes = ['motorcycle', 'bike'];
               const normalizedSelectedType = normalizeVehicleType(selectedVehicleType);
-              const shouldShowCapacitySections = selectedVehicleType === 'all' || capacityVehicleTypes.includes(normalizedSelectedType);
-
-              const capacityContent = shouldShowCapacitySections ? renderCapacitySections() : null;
-
-              // When specifically filtering to capacity-based vehicle types, only show those sections
-              if (capacityVehicleTypes.includes(normalizedSelectedType) && selectedVehicleType !== 'all') {
-                return capacityContent;
-              }
-
-              // For "all" or non-capacity filters, render capacity sections (if any) followed by regular slots
-              // Filter out capacity vehicle types from the regular parking slots list to avoid duplicates
-              const filteredParkingSlots = parkingSlots.filter(slot => 
-                !capacityVehicleTypes.includes(normalizeVehicleType(slot.vehicleType))
-              );
-
-              const sectionsWithSlots = [...new Set(filteredParkingSlots.map(slot => slot.section))];
-              console.log('🎯 Rendering sections with slots (capacity types removed):', sectionsWithSlots);
-
-              const regularContent = viewMode === 'list'
-                ? sectionsWithSlots.map(section => renderSectionList(section, filteredParkingSlots))
-                : sectionsWithSlots.map(section => renderSection(section, filteredParkingSlots));
-
+              const typesOrder = ['car', 'motorcycle', 'bike'];
+              const typesToRender = normalizedSelectedType === 'all'
+                ? typesOrder
+                : [normalizedSelectedType];
               return (
                 <>
-                  {capacityContent}
-                  {regularContent}
+                  {typesToRender.map(t => (
+                    <View key={`group-${t}`}>
+                      {renderVehicleTypeGroup(t)}
+                    </View>
+                  ))}
                 </>
               );
             })()}

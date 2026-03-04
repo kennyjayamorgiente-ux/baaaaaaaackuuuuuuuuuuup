@@ -1343,36 +1343,27 @@ const HistoryScreen: React.FC = () => {
                     <Text style={styles.reservationDetailSubValue}>
                       Duration: {formatDuration(selectedReservation.start_time, selectedReservation.end_time)}
                     </Text>
-                    {selectedReservation.hours_deducted !== null && selectedReservation.hours_deducted !== undefined ? (
-                      <Text style={styles.reservationDetailSubValue}>
-                        Tokens Deducted: {(() => {
-                          const hours = Math.floor(selectedReservation.hours_deducted);
-                          const minutes = Math.round((selectedReservation.hours_deducted - hours) * 60);
-                          
-                          if (hours === 0 && minutes > 0) {
-                            return `${minutes} min`;
-                          } else if (hours > 0 && minutes === 0) {
-                            return `${hours} hr${hours >= 1 ? 's' : ''}`;
-                          } else {
-                            return `${hours} hr${hours >= 1 ? 's' : ''} ${minutes} min`;
-                          }
-                        })()}
-                      </Text>
-                    ) : selectedReservation.end_time ? (
-                      <Text style={styles.reservationDetailSubValue}>
-                        Tokens Deducted: {(() => {
-                          // Use same minimum charge logic as formatHoursToHHMM
-                          const minCharge = 0.01; // 1 minute minimum
-                          const hours = Math.floor(minCharge);
-                          const minutes = Math.round((minCharge - hours) * 60);
-                          return minutes > 0 ? `${minutes} min` : `${hours} hr`;
-                        })()}
-                      </Text>
-                    ) : (
-                      <Text style={styles.reservationDetailSubValue}>
-                        Tokens Deducted: N/A
-                      </Text>
-                    )}
+                    <Text style={styles.reservationDetailSubValue}>
+                      Tokens Deducted: {(() => {
+                        const explicitTokens = typeof (selectedReservation as any).tokens_deducted === 'number'
+                          ? Number((selectedReservation as any).tokens_deducted)
+                          : undefined;
+                        const billedMinutes = typeof selectedReservation?.billingBreakdown?.totalChargedMinutes === 'number'
+                          ? selectedReservation.billingBreakdown.totalChargedMinutes
+                          : undefined;
+                        if (explicitTokens !== undefined) {
+                          return `${explicitTokens.toFixed(2)} Tokens`;
+                        }
+                        if (billedMinutes !== undefined) {
+                          return `${billedMinutes} Tokens`;
+                        }
+                        if (selectedReservation.hours_deducted !== null && selectedReservation.hours_deducted !== undefined) {
+                          const minutes = Math.round(Number(selectedReservation.hours_deducted) * 60);
+                          return `${minutes} Tokens`;
+                        }
+                        return 'N/A';
+                      })()}
+                    </Text>
                   </View>
 
                   {/* Billing Breakdown - only show for completed reservations with billing breakdown */}
@@ -1398,6 +1389,28 @@ const HistoryScreen: React.FC = () => {
                             {formatChargedHours(selectedReservation.billingBreakdown.totalChargedHours)}
                           </Text>
                         </View>
+                      <View style={styles.billingBreakdownRow}>
+                        <Text style={styles.billingBreakdownLabel}>Tokens Deducted:</Text>
+                        <Text style={styles.billingBreakdownValue}>
+                          {(() => {
+                            const explicitTokens = typeof (selectedReservation as any).tokens_deducted === 'number'
+                              ? Number((selectedReservation as any).tokens_deducted).toFixed(2)
+                              : null;
+                            const minutes = selectedReservation.billingBreakdown.totalChargedMinutes;
+                            if (explicitTokens !== null) return `${explicitTokens} Tokens`;
+                            if (typeof minutes === 'number') return `${minutes} Tokens`;
+                            return 'N/A';
+                          })()}
+                        </Text>
+                      </View>
+                      {(selectedReservation as any).hourly_rate_used !== undefined && (
+                        <View style={styles.billingBreakdownRow}>
+                          <Text style={styles.billingBreakdownLabel}>Rate:</Text>
+                          <Text style={styles.billingBreakdownValue}>
+                            {Number((selectedReservation as any).hourly_rate_used).toFixed(2)} tokens/hour
+                          </Text>
+                        </View>
+                      )}
                         <Text style={styles.billingBreakdownFormula}>
                           {selectedReservation.billingBreakdown.breakdown}
                         </Text>

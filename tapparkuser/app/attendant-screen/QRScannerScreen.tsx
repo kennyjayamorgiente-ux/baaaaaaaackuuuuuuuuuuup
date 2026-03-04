@@ -118,9 +118,24 @@ export default function QRScannerScreen() {
         try {
           const response = await ApiService.endParkingSessionViaQR(data);
           if (response.success) {
+            const d = response.data || {};
+            const durationMin = typeof d.durationMinutes === 'number' ? d.durationMinutes : undefined;
+            const durationHours = typeof d.durationHours === 'number' ? d.durationHours : (durationMin ? (durationMin / 60) : undefined);
+            const tokensDeducted = typeof d.chargeHours === 'number' ? d.chargeHours : undefined;
+            const rateUsed = (typeof tokensDeducted === 'number' && typeof durationHours === 'number' && durationHours > 0)
+              ? (tokensDeducted / durationHours)
+              : undefined;
+            const msgParts = [
+              'QR Code scanned successfully!',
+              'Parking session has ended.',
+              durationMin !== undefined ? `\nDuration: ${durationMin} minutes` : (durationHours !== undefined ? `\nDuration: ${durationHours.toFixed(2)} hours` : ''),
+              typeof tokensDeducted === 'number' ? `\nTokens Deducted: ${tokensDeducted.toFixed(2)}` : '',
+              typeof rateUsed === 'number' ? `\nRate: ${rateUsed.toFixed(2)} tokens/hour` : ''
+            ].filter(Boolean);
+            const msg = msgParts.join('');
             Alert.alert(
               'Parking Session Ended!',
-              `QR Code scanned successfully!\nParking session has ended.\n\nDuration: ${response.data.durationMinutes} minutes`,
+              msg,
               [{ 
                 text: 'OK',
                 onPress: () => {}

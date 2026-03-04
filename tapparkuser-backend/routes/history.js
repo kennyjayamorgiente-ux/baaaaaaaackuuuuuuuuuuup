@@ -303,6 +303,18 @@ router.get('/parking', authenticateToken, async (req, res) => {
 
       if (regularSpotDetails.length > 0) {
         const spot = regularSpotDetails[0];
+        const rateRows = await db.query(`
+          SELECT deduction_rate
+          FROM vehicle_type_deduction_rates
+          WHERE vehicle_type_id = (SELECT vehicle_type_id FROM vehicle_types WHERE vehicle_type_name = ?)
+            AND is_active = 1
+          ORDER BY updated_at DESC, created_at DESC
+          LIMIT 1
+        `, [reservation.vehicle_type]);
+        const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
+        const fallbackRate = 0;
+        const hourlyRateUsed = typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : fallbackRate;
+        const tokensDeducted = reservation.hours_deducted ? Number((reservation.hours_deducted * hourlyRateUsed).toFixed(2)) : 0;
         const billingBreakdown = buildBillingBreakdown();
 
         sessions.push({
@@ -315,10 +327,13 @@ router.get('/parking', authenticateToken, async (req, res) => {
           spot_type: spot.spot_type,
           spot_status: spot.spot_status,
           section_name: spot.section_name,
-          billingBreakdown
+          billingBreakdown,
+          tokens_deducted: tokensDeducted,
+          hourly_rate_used: hourlyRateUsed
         });
         continue;
       }
+
 
       if (parkingSectionId) {
         const sectionDetails = await db.query(`
@@ -335,6 +350,18 @@ router.get('/parking', authenticateToken, async (req, res) => {
 
         if (sectionDetails.length > 0) {
           const section = sectionDetails[0];
+          const rateRows = await db.query(`
+            SELECT deduction_rate
+            FROM vehicle_type_deduction_rates
+            WHERE vehicle_type_id = (SELECT vehicle_type_id FROM vehicle_types WHERE vehicle_type_name = ?)
+              AND is_active = 1
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+          `, [section.vehicle_type]);
+          const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
+          const fallbackRate = 0;
+          const hourlyRateUsed = typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : fallbackRate;
+          const tokensDeducted = reservation.hours_deducted ? Number((reservation.hours_deducted * hourlyRateUsed).toFixed(2)) : 0;
           const billingBreakdown = buildBillingBreakdown();
 
           sessions.push({
@@ -347,7 +374,9 @@ router.get('/parking', authenticateToken, async (req, res) => {
             spot_type: section.vehicle_type || 'motorcycle',
             spot_status: 'available',
             section_name: section.section_name,
-            billingBreakdown
+            billingBreakdown,
+            tokens_deducted: tokensDeducted,
+            hourly_rate_used: hourlyRateUsed
           });
         }
       }
