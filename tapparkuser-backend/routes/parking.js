@@ -450,12 +450,12 @@ router.post('/end/:sessionId', authenticateToken, async (req, res) => {
     const subscriptionHours = await db.query(`
       SELECT 
         s.subscription_id,
-        s.hours_remaining,
-        s.hours_used,
+        s.tokens_remaining as hours_remaining,
+        s.tokens_used as hours_used,
         p.plan_name
       FROM subscriptions s
       JOIN plans p ON s.plan_id = p.plan_id
-      WHERE s.user_id = ? AND s.status = 'active' AND s.hours_remaining > 0
+      WHERE s.user_id = ? AND s.status = 'active' AND s.tokens_remaining > 0
       ORDER BY s.purchase_date ASC
       LIMIT 1
     `, [req.user.user_id]);
@@ -501,7 +501,7 @@ router.post('/end/:sessionId', authenticateToken, async (req, res) => {
       {
         sql: `
           UPDATE subscriptions 
-          SET hours_remaining = GREATEST(0, hours_remaining - ?), hours_used = hours_used + ?
+          SET tokens_remaining = GREATEST(0, tokens_remaining - ?), tokens_used = tokens_used + ?
           WHERE subscription_id = ?
         `,
         params: [hoursToDeduct, hoursToDeduct, subscriptionId]

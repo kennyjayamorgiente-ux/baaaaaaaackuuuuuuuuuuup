@@ -254,7 +254,7 @@ const checkBalance = (requiredAmount = 0) => {
       }
 
       const user = await db.query(
-        'SELECT hour_balance FROM users WHERE user_id = ?',
+        'SELECT tokens FROM users WHERE user_id = ?',
         [req.user.user_id]
       );
 
@@ -265,14 +265,14 @@ const checkBalance = (requiredAmount = 0) => {
         });
       }
 
-      if (user[0].hour_balance < requiredAmount) {
+      if (user[0].tokens < requiredAmount) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient balance. Required: $${requiredAmount}, Available: $${user[0].hour_balance}`
+          message: `Insufficient balance. Required: $${requiredAmount}, Available: $${user[0].tokens}`
         });
       }
 
-      req.userBalance = user[0].hour_balance;
+      req.userBalance = user[0].tokens;
       next();
     } catch (error) {
       console.error('Balance check error:', error);

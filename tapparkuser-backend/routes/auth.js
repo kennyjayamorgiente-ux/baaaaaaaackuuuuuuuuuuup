@@ -95,7 +95,7 @@ router.post('/register', registerValidation, async (req, res) => {
 
     // Create user with Subscriber type (type_id = 1)
     const result = await db.query(`
-      INSERT INTO users (email, password, first_name, last_name, user_type_id, hour_balance)
+      INSERT INTO users (email, password, first_name, last_name, user_type_id, tokens)
       VALUES (?, ?, ?, ?, 1, 0)
     `, [email, hashedPassword, firstName, lastName]);
 
@@ -165,7 +165,7 @@ router.post('/login', loginValidation, async (req, res) => {
     // Find user with type information
     // Check if user has accepted terms by checking if they have a TERMS_ACCEPTED log entry
     const users = await db.query(`
-      SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.hour_balance, u.user_type_id, u.profile_picture, 
+      SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture, 
              t.account_type_name,
              CASE 
                WHEN EXISTS (
@@ -221,7 +221,7 @@ router.post('/login', loginValidation, async (req, res) => {
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      hour_balance: user.hour_balance,
+      tokens: user.tokens,
       type_id: user.user_type_id,
       account_type_name: user.account_type_name,
       profile_image: profileImageUrl,
@@ -278,7 +278,7 @@ router.post('/login', loginValidation, async (req, res) => {
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const users = await db.query(`
-      SELECT u.user_id, u.email, u.first_name, u.last_name, u.hour_balance, u.user_type_id, u.profile_picture, 
+      SELECT u.user_id, u.email, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture, 
              t.account_type_name, u.created_at,
              CASE 
                WHEN EXISTS (
@@ -315,7 +315,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      hour_balance: user.hour_balance,
+      tokens: user.tokens,
       type_id: user.user_type_id,
       account_type_name: user.account_type_name,
       profile_image: profileImageUrl,

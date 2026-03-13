@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   Modal,
   Alert,
   ActivityIndicator,
@@ -14,24 +13,14 @@ import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
-import * as SystemUI from 'expo-system-ui';
 import SharedHeader from '../../components/SharedHeader';
-import { SvgXml } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../contexts/ThemeContext';
-import { 
-  maroonUsersEditIconSvg,
-  maroonTimeIconSvg,
-  maroonProfitHandIconSvg
-} from '../assets/icons/index2';
 import { ApiService } from '../../services/api';
 import { 
   useScreenDimensions, 
   getAdaptiveFontSize, 
-  getAdaptiveSize, 
-  getAdaptivePadding, 
-  getAdaptiveMargin 
 } from '../../hooks/use-screen-dimensions';
 import { createHistoryScreenStyles } from '../styles/historyScreenStyles';
 import { getNormalizedProfileImageFromUser } from '../../utils/profileImage';
@@ -40,7 +29,7 @@ interface Plan {
   plan_id: number;
   plan_name: string;
   cost: number;
-  number_of_hours: number;
+  number_of_tokens: number;
   description: string;
 }
 
@@ -205,7 +194,7 @@ const TopUpScreen: React.FC = () => {
         if (response.success) {
           Alert.alert(
             'Payment Successful!',
-            `You have successfully purchased ${selectedPlan?.plan_name}!\n\nTokens added: ${selectedPlan?.number_of_hours}\nTotal tokens remaining: ${response.data.total_hours_remaining || 'Updated'}`,
+            `You have successfully purchased ${selectedPlan?.plan_name}!\n\nTokens added: ${selectedPlan?.number_of_tokens}\nTotal tokens remaining: ${response.data.total_hours_remaining || 'Updated'}`,
             [
               {
                 text: 'OK',
@@ -232,7 +221,7 @@ const TopUpScreen: React.FC = () => {
       // Payment was successful in PayPal, so show success message anyway
       Alert.alert(
         'Payment Successful!',
-        `You have successfully purchased ${selectedPlan?.plan_name}!\n\nTokens added: ${selectedPlan?.number_of_hours}`,
+        `You have successfully purchased ${selectedPlan?.plan_name}!\n\nTokens added: ${selectedPlan?.number_of_tokens}`,
         [
           {
             text: 'OK',
@@ -331,7 +320,7 @@ const TopUpScreen: React.FC = () => {
                     <Text style={styles.parkingLabel}>Tokens Included</Text>
                     <View style={styles.timeSlotContainer}>
                       <Text style={styles.timestampDetailValue}>
-                        {plan.number_of_hours} Tokens
+                        {plan.number_of_tokens} Tokens
                       </Text>
                     </View>
                     
@@ -389,7 +378,7 @@ const TopUpScreen: React.FC = () => {
                     
                     <Text style={styles.reservationDetailLabel}>Tokens Included</Text>
                     <Text style={[styles.reservationDetailSubValue, { marginTop: 8, marginBottom: 16 }]}>
-                      {selectedPlan.number_of_hours} Tokens
+                      {selectedPlan.number_of_tokens} Tokens
                     </Text>
                     
                     <Text style={styles.reservationDetailLabel}>Description</Text>

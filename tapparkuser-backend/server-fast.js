@@ -544,9 +544,9 @@ const runGracePeriodCheck = async () => {
           let remainingChargeHours = chargeHours;
 
           const [activeSubscriptions] = await connection.execute(
-            `SELECT subscription_id, hours_remaining
+            `SELECT subscription_id, tokens_remaining as hours_remaining
              FROM subscriptions
-             WHERE user_id = ? AND status = 'active' AND hours_remaining > 0
+             WHERE user_id = ? AND status = 'active' AND tokens_remaining > 0
              ORDER BY purchase_date ASC`,
             [reservation.user_id]
           );
@@ -559,7 +559,7 @@ const runGracePeriodCheck = async () => {
 
             await connection.execute(
               `UPDATE subscriptions
-               SET hours_remaining = GREATEST(0, hours_remaining - ?), hours_used = hours_used + ?
+               SET tokens_remaining = GREATEST(0, tokens_remaining - ?), tokens_used = tokens_used + ?
                WHERE subscription_id = ?`,
               [deductNow, deductNow, sub.subscription_id]
             );
@@ -579,14 +579,14 @@ const runGracePeriodCheck = async () => {
           }
 
           const [updatedBalanceRows] = await connection.execute(
-            `SELECT COALESCE(SUM(hours_remaining), 0) as total_hours_remaining
+            `SELECT COALESCE(SUM(tokens_remaining), 0) as total_hours_remaining
              FROM subscriptions
              WHERE user_id = ? AND status = 'active'`,
             [reservation.user_id]
           );
           const updatedBalance = parseFloat(updatedBalanceRows[0]?.total_hours_remaining || 0);
           await connection.execute(
-            'UPDATE users SET hour_balance = ? WHERE user_id = ?',
+            'UPDATE users SET tokens = ? WHERE user_id = ?',
             [updatedBalance, reservation.user_id]
           );
 
@@ -639,6 +639,5 @@ console.log(`⏰ Simple grace period checker scheduled every ${GRACE_CHECK_INTER
 if (!isProduction) {
   console.log('⏰ Interval ID:', gracePeriodInterval);
 }
-
 
 

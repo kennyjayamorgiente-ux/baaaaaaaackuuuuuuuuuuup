@@ -607,7 +607,7 @@ export class ApiService {
           email: string;
           first_name: string;
           last_name: string;
-          hour_balance: number;
+          tokens: number;
           type_id: number;
           account_type_name: string;
           terms_accepted?: boolean;
@@ -689,7 +689,7 @@ export class ApiService {
           last_name: string;
           phone?: string;
           profile_image?: string;
-          hour_balance: number;
+          tokens: number;
           is_verified: boolean;
           created_at: string;
           type_id: number;
@@ -1445,7 +1445,7 @@ export class ApiService {
         plan_id: number;
         plan_name: string;
         cost: number;
-        number_of_hours: number;
+        number_of_tokens: number;
         description: string;
       }>;
     }>('/subscriptions/plans');
@@ -1474,18 +1474,17 @@ export class ApiService {
     return this.request<{
       success: boolean;
       data: {
-        total_hours_remaining: number;
-        total_hours_used: number;
+        total_tokens_remaining: number;
+        total_tokens_used: number;
         active_subscriptions: number;
-        user_hour_balance: number;
         subscriptions: Array<{
           subscription_id: number;
           purchase_date: string;
-          hours_remaining: number;
-          hours_used: number;
+          tokens_remaining: number;
+          tokens_used: number;
           plan_name: string;
           cost: number;
-          number_of_hours: number;
+          number_of_tokens: number;
         }>;
       };
     }>('/subscriptions/balance');
@@ -2297,14 +2296,14 @@ export class ApiService {
     return this.request<{
       success: boolean;
       data: {
-        total_hours_remaining: number;
-        total_hours_used: number;
+        total_tokens_remaining: number;
+        total_tokens_used: number;
         active_subscriptions: number;
         subscriptions: Array<{
           id: number;
           plan_name: string;
-          hours_remaining: number;
-          hours_used: number;
+          tokens_remaining: number;
+          tokens_used: number;
           status: string;
           created_at: string;
         }>;

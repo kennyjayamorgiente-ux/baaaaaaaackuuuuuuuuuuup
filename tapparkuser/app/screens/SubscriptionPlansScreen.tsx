@@ -23,7 +23,7 @@ interface Plan {
   plan_id: number;
   plan_name: string;
   cost: number;
-  number_of_hours: number;
+  number_of_tokens: number;
   description: string;
 }
 
@@ -68,7 +68,7 @@ export default function SubscriptionPlansScreen() {
     setSelectedPlan(plan);
     Alert.alert(
       'Confirm Purchase',
-      `Purchase ${plan.plan_name} for ₱${plan.cost}?\n\nYou will receive ${plan.number_of_hours} parking hours.`,
+      `Purchase ${plan.plan_name} for ₱${plan.cost}?\n\nYou will receive ${plan.number_of_tokens} tokens.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Continue to Payment', onPress: () => handlePayPalCheckout(plan) }
@@ -285,7 +285,7 @@ export default function SubscriptionPlansScreen() {
       
       <ScrollView style={styles.scrollContent}>
         <Text style={styles.title}>Choose Your Plan</Text>
-        <Text style={styles.subtitle}>Select a subscription plan to add parking hours</Text>
+        <Text style={styles.subtitle}>Select a subscription plan to add tokens</Text>
 
         {plans.map((plan) => (
           <View
@@ -302,7 +302,7 @@ export default function SubscriptionPlansScreen() {
             
             <Text style={styles.planHours}>
               <Ionicons name="time-outline" size={16} color={colors.primary} />
-              {' '}{plan.number_of_hours} Parking Hours
+              {' '}{plan.number_of_tokens} Tokens
             </Text>
             
             {plan.description && (

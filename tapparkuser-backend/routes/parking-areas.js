@@ -244,12 +244,12 @@ const requireBookingEligibility = async (userId) => {
   }
 
   const balanceResult = await db.query(
-    `SELECT COALESCE(SUM(hours_remaining), 0) AS total_hours_remaining
+    `SELECT COALESCE(SUM(tokens_remaining), 0) AS total_tokens_remaining
      FROM subscriptions
-     WHERE user_id = ? AND status = 'active' AND hours_remaining > 0`,
+     WHERE user_id = ? AND status = 'active' AND tokens_remaining > 0`,
     [userId]
   );
-  const balanceHours = parseFloat(balanceResult[0]?.total_hours_remaining || 0);
+  const balanceHours = parseFloat(balanceResult[0]?.total_tokens_remaining || 0);
 
   if (balanceHours <= 0) {
     return {
@@ -277,8 +277,8 @@ router.post('/book', authenticateToken, validateBodyInt('vehicleId', 'Vehicle ID
     const eligibility = await requireBookingEligibility(req.user.user_id);
     if (!eligibility.allowed) {
       const messages = {
-        penalty: `You have ${eligibility.outstandingPenalty.toFixed(2)} penalty hours outstanding. Please purchase a plan to settle them before reserving again.`,
-        insufficient_balance: 'You have no remaining subscription hours. Please purchase a plan before reserving a spot.'
+        penalty: `You have ${eligibility.outstandingPenalty.toFixed(2)} penalty tokens outstanding. Please purchase a plan to settle them before reserving again.`,
+        insufficient_balance: 'You have no remaining subscription tokens. Please purchase a plan before reserving a spot.'
       };
       return res.status(403).json({
         success: false,
@@ -1381,16 +1381,16 @@ router.get('/booking/:reservationId', authenticateToken, async (req, res) => {
               try {
                 const subscriptionHours = await db.query(`
                   SELECT 
-                    COALESCE(SUM(hours_remaining), 0) as total_hours_remaining
+                    COALESCE(SUM(tokens_remaining), 0) as total_hours_remaining
                   FROM subscriptions
-                  WHERE user_id = ? AND status = 'active' AND hours_remaining > 0
+                  WHERE user_id = ? AND status = 'active' AND tokens_remaining > 0
                 `, [booking.user_id]);
 
                 const balanceHours = subscriptionHours[0]?.total_hours_remaining || 0;
                 const activeSubscription = await db.query(`
-                  SELECT subscription_id, hours_remaining
+                  SELECT subscription_id, tokens_remaining as hours_remaining
                   FROM subscriptions
-                  WHERE user_id = ? AND status = 'active' AND hours_remaining > 0
+                  WHERE user_id = ? AND status = 'active' AND tokens_remaining > 0
                   ORDER BY purchase_date ASC
                   LIMIT 1
                 `, [booking.user_id]);
@@ -1417,7 +1417,7 @@ router.get('/booking/:reservationId', authenticateToken, async (req, res) => {
                     ...(hoursToDeduct > 0 ? [{
                       sql: `
                         UPDATE subscriptions 
-                        SET hours_remaining = GREATEST(0, hours_remaining - ?), hours_used = hours_used + ?
+                        SET tokens_remaining = GREATEST(0, tokens_remaining - ?), tokens_used = tokens_used + ?
                         WHERE subscription_id = ?
                       `,
                       params: [hoursToDeduct, hoursToDeduct, activeSubscription[0].subscription_id]
@@ -1434,7 +1434,7 @@ router.get('/booking/:reservationId', authenticateToken, async (req, res) => {
                   await db.transaction(transactionQueries);
 
                   await db.query(`
-                    SELECT COALESCE(SUM(hours_remaining), 0) as total_hours_remaining
+                    SELECT COALESCE(SUM(tokens_remaining), 0) as total_hours_remaining
                     FROM subscriptions 
                     WHERE user_id = ? AND status = 'active'
                   `, [booking.user_id]);

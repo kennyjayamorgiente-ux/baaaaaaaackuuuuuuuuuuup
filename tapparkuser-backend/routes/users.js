@@ -182,11 +182,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
     // Get subscription balance
     const subscriptionBalance = await db.query(`
       SELECT
-        COALESCE(SUM(s.hours_remaining), 0) as total_hours_remaining,
-        COALESCE(SUM(s.hours_used), 0) as total_hours_used,
+        COALESCE(SUM(s.tokens_remaining), 0) as total_hours_remaining,
+        COALESCE(SUM(s.tokens_used), 0) as total_hours_used,
         COUNT(s.subscription_id) as active_subscriptions
       FROM subscriptions s
-      WHERE s.user_id = ? AND s.status = 'active' AND s.hours_remaining > 0
+      WHERE s.user_id = ? AND s.status = 'active' AND s.tokens_remaining > 0
     `, [req.user.user_id]);
 
     // Get active parking session

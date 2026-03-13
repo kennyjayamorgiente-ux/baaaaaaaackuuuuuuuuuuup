@@ -4,6 +4,30 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
+const getPlanTokensColumn = async () => {
+  const structure = await db.getTableStructure('plans');
+  const columns = new Set((structure || []).map((col) => col.Field));
+  const candidates = ['number_of_tokens', 'number_of_hours', 'tokens', 'hours'];
+  for (const candidate of candidates) {
+    if (columns.has(candidate)) return candidate;
+  }
+  return null;
+};
+
+const getVehicleTokenRate = async (vehicleType) => {
+  if (!vehicleType) return 0;
+  const rateRows = await db.query(`
+    SELECT deduction_rate
+    FROM vehicle_type_deduction_rates
+    WHERE vehicle_type_id = (SELECT vehicle_type_id FROM vehicle_types WHERE vehicle_type_name = ?)
+      AND is_active = 1
+    ORDER BY updated_at DESC, created_at DESC
+    LIMIT 1
+  `, [vehicleType]);
+  const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
+  return typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : 0;
+};
+
 // Get comprehensive user history
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -28,6 +52,14 @@ router.get('/', authenticateToken, async (req, res) => {
           v.brand,
           v.color,
           CASE 
+            WHEN r.end_time IS NOT NULL THEN GREATEST(1, TIMESTAMPDIFF(MINUTE, r.start_time, r.end_time))
+            ELSE NULL
+          END as duration_minutes,
+          CASE 
+            WHEN r.end_time IS NOT NULL THEN GREATEST(1, TIMESTAMPDIFF(MINUTE, r.start_time, r.end_time)) / 60.0
+            ELSE NULL
+          END as charged_hours,
+          CASE 
             WHEN r.end_time IS NOT NULL THEN GREATEST(1, TIMESTAMPDIFF(MINUTE, r.start_time, r.end_time)) / 60.0
             ELSE NULL
           END as hours_deducted
@@ -43,6 +75,11 @@ router.get('/', authenticateToken, async (req, res) => {
       
       for (const reservation of reservations) {
         const parkingSpotsId = reservation.parking_spots_id;
+        const tokenRate = await getVehicleTokenRate(reservation.vehicle_type);
+        const chargedHours = typeof reservation.charged_hours === 'number'
+          ? reservation.charged_hours
+          : (reservation.hours_deducted || 0);
+        const tokensDeducted = chargedHours > 0 ? Number((chargedHours * tokenRate).toFixed(2)) : 0;
         
         // Check if this parking_spots_id exists in parking_section table
         const sectionCheck = await db.query(`
@@ -73,7 +110,9 @@ router.get('/', authenticateToken, async (req, res) => {
               location: section.location,
               spot_number: `M1-${section.section_name}-1`,
               spot_type: 'motorcycle',
-              section_name: section.section_name
+              section_name: section.section_name,
+              tokens_deducted: tokensDeducted,
+              hourly_rate_used: tokenRate
             });
           }
         } else {
@@ -99,7 +138,9 @@ router.get('/', authenticateToken, async (req, res) => {
               location: spot.location,
               spot_number: spot.spot_number,
               spot_type: spot.spot_type,
-              section_name: spot.section_name
+              section_name: spot.section_name,
+              tokens_deducted: tokensDeducted,
+              hourly_rate_used: tokenRate
             });
           }
         }
@@ -110,6 +151,13 @@ router.get('/', authenticateToken, async (req, res) => {
 
     if (!type || type === 'payments') {
       // Get payment history
+      const planTokensColumn = await getPlanTokensColumn();
+      if (!planTokensColumn) {
+        return res.status(500).json({
+          success: false,
+          message: 'Plan token column not found'
+        });
+      }
       const paymentHistory = await db.query(`
         SELECT 
           'payment' as type,
@@ -120,7 +168,7 @@ router.get('/', authenticateToken, async (req, res) => {
           pm.method_name as payment_method,
           p.status,
           pl.plan_name as location_name,
-          pl.number_of_hours,
+          pl.${planTokensColumn} as number_of_tokens,
           pl.cost
         FROM payments p
         LEFT JOIN payment_method pm ON p.payment_method_id = pm.id
@@ -195,6 +243,11 @@ router.get('/parking', authenticateToken, async (req, res) => {
           WHEN r.end_time IS NOT NULL THEN GREATEST(1, TIMESTAMPDIFF(MINUTE, r.time_stamp, r.end_time))
           ELSE NULL
         END as duration_minutes,
+        CASE 
+          WHEN r.booking_status = 'invalid' AND r.waiting_end_time IS NOT NULL THEN GREATEST(1, TIMESTAMPDIFF(MINUTE, r.time_stamp, r.waiting_end_time)) / 60.0
+          WHEN r.end_time IS NOT NULL THEN GREATEST(1, TIMESTAMPDIFF(MINUTE, r.time_stamp, r.end_time)) / 60.0
+          ELSE NULL
+        END as charged_hours,
         CASE 
           WHEN r.booking_status = 'invalid' AND r.waiting_end_time IS NOT NULL THEN GREATEST(1, TIMESTAMPDIFF(MINUTE, r.time_stamp, r.waiting_end_time)) / 60.0
           WHEN r.end_time IS NOT NULL THEN GREATEST(1, TIMESTAMPDIFF(MINUTE, r.time_stamp, r.end_time)) / 60.0
@@ -303,18 +356,11 @@ router.get('/parking', authenticateToken, async (req, res) => {
 
       if (regularSpotDetails.length > 0) {
         const spot = regularSpotDetails[0];
-        const rateRows = await db.query(`
-          SELECT deduction_rate
-          FROM vehicle_type_deduction_rates
-          WHERE vehicle_type_id = (SELECT vehicle_type_id FROM vehicle_types WHERE vehicle_type_name = ?)
-            AND is_active = 1
-          ORDER BY updated_at DESC, created_at DESC
-          LIMIT 1
-        `, [reservation.vehicle_type]);
-        const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
-        const fallbackRate = 0;
-        const hourlyRateUsed = typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : fallbackRate;
-        const tokensDeducted = reservation.hours_deducted ? Number((reservation.hours_deducted * hourlyRateUsed).toFixed(2)) : 0;
+        const hourlyRateUsed = await getVehicleTokenRate(reservation.vehicle_type);
+        const chargedHours = typeof reservation.charged_hours === 'number'
+          ? reservation.charged_hours
+          : (reservation.hours_deducted || 0);
+        const tokensDeducted = chargedHours > 0 ? Number((chargedHours * hourlyRateUsed).toFixed(2)) : 0;
         const billingBreakdown = buildBillingBreakdown();
 
         sessions.push({
@@ -350,18 +396,12 @@ router.get('/parking', authenticateToken, async (req, res) => {
 
         if (sectionDetails.length > 0) {
           const section = sectionDetails[0];
-          const rateRows = await db.query(`
-            SELECT deduction_rate
-            FROM vehicle_type_deduction_rates
-            WHERE vehicle_type_id = (SELECT vehicle_type_id FROM vehicle_types WHERE vehicle_type_name = ?)
-              AND is_active = 1
-            ORDER BY updated_at DESC, created_at DESC
-            LIMIT 1
-          `, [section.vehicle_type]);
-          const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
-          const fallbackRate = 0;
-          const hourlyRateUsed = typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : fallbackRate;
-          const tokensDeducted = reservation.hours_deducted ? Number((reservation.hours_deducted * hourlyRateUsed).toFixed(2)) : 0;
+          const rateVehicleType = reservation.vehicle_type || section.vehicle_type;
+          const hourlyRateUsed = await getVehicleTokenRate(rateVehicleType);
+          const chargedHours = typeof reservation.charged_hours === 'number'
+            ? reservation.charged_hours
+            : (reservation.hours_deducted || 0);
+          const tokensDeducted = chargedHours > 0 ? Number((chargedHours * hourlyRateUsed).toFixed(2)) : 0;
           const billingBreakdown = buildBillingBreakdown();
 
           sessions.push({
@@ -415,6 +455,14 @@ router.get('/payments', authenticateToken, async (req, res) => {
     const { page = 1, limit = 10, type } = req.query;
     const offset = (page - 1) * limit;
 
+    const planTokensColumn = await getPlanTokensColumn();
+    if (!planTokensColumn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Plan token column not found'
+      });
+    }
+
     let query = `
       SELECT 
         p.payment_id,
@@ -426,7 +474,7 @@ router.get('/payments', authenticateToken, async (req, res) => {
         p.payment_date as created_at,
         pl.plan_name as location_name,
         pl.description as location_address,
-        pl.number_of_hours,
+        pl.${planTokensColumn} as number_of_tokens,
         pl.cost
       FROM payments p
       LEFT JOIN payment_method pm ON p.payment_method_id = pm.id

@@ -1092,7 +1092,7 @@ router.post(
       const hashedPassword = await bcrypt.hash(guestPassword, 12);
       
       const [guestUserResult] = await connection.execute(
-        `INSERT INTO users (email, password, first_name, last_name, user_type_id, hour_balance)
+        `INSERT INTO users (email, password, first_name, last_name, user_type_id, tokens)
          VALUES (?, ?, ?, ?, 4, 0)`,
         [guestEmail, hashedPassword, firstName, lastName]
       );
@@ -1530,4 +1530,3 @@ router.put(
 });
 
 module.exports = router;
-

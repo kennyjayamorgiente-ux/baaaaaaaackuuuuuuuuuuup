@@ -10,7 +10,7 @@ interface User {
   last_name: string;
   profile_image?: string;
   profile_image_url?: string;
-  hour_balance: number;
+  tokens: number;
   type_id: number;
   account_type_name: string;
   terms_accepted?: boolean;

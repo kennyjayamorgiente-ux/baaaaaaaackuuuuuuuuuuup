@@ -7,6 +7,16 @@ const { settlePenaltyWithHours } = require('../utils/penaltyHelper');
 
 const router = express.Router();
 
+const getPlanTokensColumn = async () => {
+  const structure = await db.getTableStructure('plans');
+  const columns = new Set((structure || []).map((col) => col.Field));
+  const candidates = ['number_of_tokens', 'number_of_hours', 'tokens', 'hours'];
+  for (const candidate of candidates) {
+    if (columns.has(candidate)) return candidate;
+  }
+  return null;
+};
+
 // Create PayPal order for subscription plan
 router.post('/create-order', authenticateToken, async (req, res) => {
   try {
@@ -20,8 +30,15 @@ router.post('/create-order', authenticateToken, async (req, res) => {
     }
 
     // Get plan details
+    const planTokensColumn = await getPlanTokensColumn();
+    if (!planTokensColumn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Plan token column not found'
+      });
+    }
     const plans = await db.query(
-      'SELECT plan_id, plan_name, cost, number_of_hours FROM plans WHERE plan_id = ?',
+      `SELECT plan_id, plan_name, cost, ${planTokensColumn} as number_of_tokens FROM plans WHERE plan_id = ?`,
       [plan_id]
     );
 
@@ -74,7 +91,7 @@ router.post('/create-order', authenticateToken, async (req, res) => {
           plan_id: plan.plan_id,
           plan_name: plan.plan_name,
           cost: plan.cost,
-          hours: plan.number_of_hours
+          tokens: plan.number_of_tokens
         }
       }
     });
@@ -144,8 +161,12 @@ router.post('/capture-order', authenticateToken, async (req, res) => {
     // Check if payment was successful
     if (captureData.status === 'COMPLETED') {
       // Get plan details
+      const planTokensColumn = await getPlanTokensColumn();
+      if (!planTokensColumn) {
+        throw new Error('Plan token column not found');
+      }
       const plans = await db.query(
-        'SELECT plan_id, plan_name, cost, number_of_hours FROM plans WHERE plan_id = ?',
+        `SELECT plan_id, plan_name, cost, ${planTokensColumn} as number_of_tokens FROM plans WHERE plan_id = ?`,
         [transaction.plan_id]
       );
 
@@ -159,9 +180,9 @@ router.post('/capture-order', authenticateToken, async (req, res) => {
       await db.transaction([
         // Create subscription
         {
-          sql: `INSERT INTO subscriptions (user_id, plan_id, hours_remaining, hours_used, status, purchase_date)
+          sql: `INSERT INTO subscriptions (user_id, plan_id, tokens_remaining, tokens_used, status, purchase_date)
                 VALUES (?, ?, ?, 0, 'active', NOW())`,
-          params: [req.user.user_id, plan.plan_id, plan.number_of_hours]
+          params: [req.user.user_id, plan.plan_id, plan.number_of_tokens]
         },
         // Create payment record
         {
@@ -186,21 +207,21 @@ router.post('/capture-order', authenticateToken, async (req, res) => {
 
       let penaltyAdjustment = {
         penaltyAppliedHours: 0,
-        hoursAfterPenalty: plan.number_of_hours,
+        hoursAfterPenalty: plan.number_of_tokens,
         outstandingPenaltyHours: 0
       };
 
       if (subscriptionRecord.length > 0) {
         penaltyAdjustment = await settlePenaltyWithHours(
           req.user.user_id,
-          plan.number_of_hours,
+          plan.number_of_tokens,
           subscriptionRecord[0].subscription_id
         );
       }
 
       // Get updated balance after penalty deduction
       const updatedBalance = await db.query(
-        `SELECT COALESCE(SUM(hours_remaining), 0) as total_hours_remaining
+        `SELECT COALESCE(SUM(tokens_remaining), 0) as total_hours_remaining
          FROM subscriptions WHERE user_id = ? AND status = 'active'`,
         [req.user.user_id]
       );
@@ -209,7 +230,7 @@ router.post('/capture-order', authenticateToken, async (req, res) => {
       await logUserActivity(
         req.user.user_id,
         ActionTypes.SUBSCRIPTION_PURCHASE,
-        `Subscription purchased via PayPal: ${plan.plan_name} - ${plan.number_of_hours} hours for ₱${plan.cost}`,
+        `Subscription purchased via PayPal: ${plan.plan_name} - ${plan.number_of_tokens} tokens for ₱${plan.cost}`,
         subscriptionRecord[0]?.subscription_id || null
       );
 
@@ -220,12 +241,12 @@ router.post('/capture-order', authenticateToken, async (req, res) => {
           : 'Payment successful! Subscription activated.',
         data: {
           plan_name: plan.plan_name,
-          hours_added: plan.number_of_hours,
+          tokens_added: plan.number_of_tokens,
           hours_after_penalty: penaltyAdjustment.hoursAfterPenalty,
           penalty_deducted_hours: penaltyAdjustment.penaltyAppliedHours,
           outstanding_penalty_hours: penaltyAdjustment.outstandingPenaltyHours,
           cost: plan.cost,
-          total_hours_remaining: updatedBalance[0]?.total_hours_remaining || 0,
+          total_tokens_remaining: updatedBalance[0]?.total_hours_remaining || 0,
           orderId: orderId,
           captureId: captureData.id
         }
@@ -292,8 +313,15 @@ router.get('/transaction/:orderId', authenticateToken, async (req, res) => {
   try {
     const { orderId } = req.params;
 
+    const planTokensColumn = await getPlanTokensColumn();
+    if (!planTokensColumn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Plan token column not found'
+      });
+    }
     const transactions = await db.query(
-      `SELECT pt.*, p.plan_name, p.number_of_hours 
+      `SELECT pt.*, p.plan_name, p.${planTokensColumn} as number_of_tokens
        FROM paypal_transactions pt
        LEFT JOIN plans p ON pt.plan_id = p.plan_id
        WHERE pt.paypal_order_id = ? AND pt.user_id = ?`,

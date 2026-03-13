@@ -162,25 +162,23 @@ export default function HomeScreen() {
 
   // Helper function to format decimal hours to HH.MM format (e.g., 83.5 -> "83.30")
   const formatHoursToHHMM = (decimalHours: number): string => {
-    if (!decimalHours || decimalHours === 0) return '0.00';
-    const hours = Math.floor(decimalHours);
-    const minutes = Math.round((decimalHours - hours) * 60);
-    return `${hours}.${minutes.toString().padStart(2, '0')}`;
+    const value = Number(decimalHours) || 0;
+    return value.toFixed(2);
   };
 
   // Fetch user balance
-  const fetchUserBalance = async () => {
+  const fetchUserBalance = React.useCallback(async () => {
     try {
       const balanceResponse = await ApiService.getSubscriptionBalance();
       if (balanceResponse.success) {
-        const balance = balanceResponse.data.total_hours_remaining || 0;
+      const balance = balanceResponse.data.total_tokens_remaining || 0;
         setUserBalance(balance);
-        console.log('🎯 HomeScreen: Balance fetched:', balance, 'hours');
+      console.log('🎯 HomeScreen: Balance fetched:', balance, 'tokens');
       }
     } catch (error) {
       console.error('🎯 HomeScreen: Error fetching user balance:', error);
     }
-  };
+  }, []);
 
   // Fetch balance when component mounts and user is authenticated
   useEffect(() => {
@@ -376,8 +374,9 @@ export default function HomeScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      fetchUserBalance();
       checkPendingReservationExpiration();
-    }, [checkPendingReservationExpiration])
+    }, [checkPendingReservationExpiration, fetchUserBalance])
   );
 
   const handleAddVehicle = () => {

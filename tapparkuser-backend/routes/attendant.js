@@ -380,7 +380,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
         u.email,
         u.first_name,
         u.last_name,
-        u.hour_balance,
+        u.tokens,
         u.assigned_area_id,
         pa.parking_area_name,
         pa.location,
@@ -412,7 +412,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       attendantId: `ATT${user.user_id.toString().padStart(3, '0')}`,
       attendantName: `${user.first_name} ${user.last_name}`,
       email: user.email,
-      hourBalance: user.hour_balance,
+      hourBalance: user.tokens,
       accountType: user.account_type_name,
       assignedAreaId: user.assigned_area_id,
       assignedAreaName: user.parking_area_name || 'Not Assigned',
@@ -1060,9 +1060,9 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
     // Get user's subscription hours balance
     const subscriptionHours = await db.query(`
       SELECT 
-        COALESCE(SUM(hours_remaining), 0) as total_hours_remaining
+        COALESCE(SUM(tokens_remaining), 0) as total_hours_remaining
       FROM subscriptions
-      WHERE user_id = ? AND status = 'active' AND hours_remaining > 0
+      WHERE user_id = ? AND status = 'active' AND tokens_remaining > 0
     `, [reservationData.user_id]);
 
     const balanceHours = subscriptionHours[0]?.total_hours_remaining || 0;
@@ -1096,9 +1096,9 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
 
     // Get active subscription BEFORE updating (to ensure we have the right data)
     const activeSubscription = await db.query(`
-      SELECT subscription_id, hours_remaining
+      SELECT subscription_id, tokens_remaining as hours_remaining
       FROM subscriptions
-      WHERE user_id = ? AND status = 'active' AND hours_remaining > 0
+      WHERE user_id = ? AND status = 'active' AND tokens_remaining > 0
       ORDER BY purchase_date ASC
       LIMIT 1
     `, [reservationData.user_id]);
@@ -1173,7 +1173,7 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
       ...(hoursToDeduct > 0 && activeSubscription.length > 0 ? [{
         sql: `
           UPDATE subscriptions 
-          SET hours_remaining = GREATEST(0, hours_remaining - ?), hours_used = hours_used + ?
+          SET tokens_remaining = GREATEST(0, tokens_remaining - ?), tokens_used = tokens_used + ?
           WHERE subscription_id = ?
         `,
         params: [hoursToDeduct, hoursToDeduct, activeSubscription[0].subscription_id]
@@ -1221,7 +1221,7 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
     // Verify the deduction by getting updated balance (include all active subscriptions, even if hours_remaining is 0)
     const updatedSubscriptionHours = await db.query(`
       SELECT 
-        COALESCE(SUM(hours_remaining), 0) as total_hours_remaining
+        COALESCE(SUM(tokens_remaining), 0) as total_hours_remaining
       FROM subscriptions
       WHERE user_id = ? AND status = 'active'
     `, [reservationData.user_id]);
@@ -1660,7 +1660,7 @@ router.post(
       const hashedPassword = await bcrypt.hash(guestPassword, 12);
       
       const [guestUserResult] = await connection.execute(
-        `INSERT INTO users (email, password, first_name, last_name, user_type_id, hour_balance)
+        `INSERT INTO users (email, password, first_name, last_name, user_type_id, tokens)
          VALUES (?, ?, ?, ?, 4, 0)`,
         [guestEmail, hashedPassword, firstName, lastName]
       );

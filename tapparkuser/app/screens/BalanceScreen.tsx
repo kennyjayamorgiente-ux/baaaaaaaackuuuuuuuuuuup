@@ -92,6 +92,11 @@ const formatHoursToHHMM = (decimalHours: number): string => {
   return val.toFixed(2);
 };
 
+const toNumber = (value: any): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const BalanceScreen: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
@@ -195,7 +200,7 @@ const BalanceScreen: React.FC = () => {
             console.log(`🔍 Transaction ${index + 1}:`, {
               payment_id: transaction.payment_id,
               plan_name: transaction.location_name,
-              number_of_hours: transaction.number_of_hours,
+              number_of_tokens: transaction.number_of_tokens,
               cost: transaction.cost,
               amount: transaction.amount,
               payment_type: transaction.payment_type
@@ -212,9 +217,14 @@ const BalanceScreen: React.FC = () => {
         console.log('📊 Parking sessions loaded:', parkingSessions.length);
 
         const parkingTransactions = parkingSessions
-          .filter((s: any) => (s.hours_deducted || (s.billingBreakdown?.totalChargedHours ?? 0)) > 0)
           .map((s: any) => {
-            const hours = s.hours_deducted ?? (s.billingBreakdown?.totalChargedHours ?? 0);
+            const tokensDeducted = toNumber(
+              s.tokens_deducted ??
+              s.billingBreakdown?.tokensCharged ??
+              s.charged_hours ??
+              s.hours_deducted ??
+              s.billingBreakdown?.totalChargedHours
+            );
             // Use end_time if present, otherwise waiting_end_time, else time_stamp
             const created_at = s.end_time || s.waiting_end_time || s.time_stamp;
             return {
@@ -224,9 +234,13 @@ const BalanceScreen: React.FC = () => {
               status: 'completed',
               location_name: s.location_name,
               spot_number: s.spot_number,
-              hours_deducted: hours,
+              duration_minutes: s.duration_minutes,
+              charged_hours: s.charged_hours,
+              hours_deducted: s.hours_deducted,
+              tokens_deducted: tokensDeducted,
             };
-          });
+          })
+          .filter((s: any) => s.tokens_deducted > 0);
 
         // Merge and sort by created_at descending
         const merged = [...paymentTransactions, ...parkingTransactions].sort((a: any, b: any) => {
@@ -277,24 +291,26 @@ const BalanceScreen: React.FC = () => {
       payment_type: transaction.payment_type,
       subscription_id: transaction.subscription_id,
       plan_name: transaction.plan_name,
-      number_of_hours: transaction.number_of_hours,
+      number_of_tokens: transaction.number_of_tokens,
       amount: transaction.amount
     });
     
     if (transaction.type === 'parking') {
-      // For parking sessions, show hours deducted
-      const tokensDeducted = typeof transaction.tokens_deducted === 'number'
-        ? transaction.tokens_deducted
-        : (transaction.hours_deducted || 0);
-      return `- ${formatHoursToHHMM(tokensDeducted)} Token`;
+      const tokenAmount = toNumber(
+        transaction.tokens_deducted ??
+        transaction.billingBreakdown?.tokensCharged ??
+        transaction.charged_hours ??
+        transaction.hours_deducted ??
+        transaction.billingBreakdown?.totalChargedHours
+      );
+      return `- ${formatHoursToHHMM(tokenAmount)} Tokens`;
     } else if (transaction.payment_type === 'subscription') {
-      // For subscription purchases - RELY ON number_of_hours from plans table
-      const hours = transaction.number_of_hours;
-      if (!hours) {
-        console.warn('⚠️ number_of_hours is missing from transaction:', transaction.payment_id);
+      const tokens = transaction.number_of_tokens;
+      if (!tokens) {
+        console.warn('⚠️ number_of_tokens is missing from transaction:', transaction.payment_id);
         return '+ 0 Tokens (data missing)';
       }
-      return `+ ${hours} Tokens`;
+      return `+ ${tokens} Tokens`;
     } else {
       // Other payment types
       return `- ${transaction.amount || 0}`;
@@ -308,7 +324,7 @@ const BalanceScreen: React.FC = () => {
     if (transaction.payment_type === 'subscription') {
       return 'credit';
     }
-    if (typeof transaction.number_of_hours === 'number' && transaction.number_of_hours > 0) {
+    if (typeof transaction.number_of_tokens === 'number' && transaction.number_of_tokens > 0) {
       return 'credit';
     }
     return 'debit';
@@ -666,7 +682,7 @@ const BalanceScreen: React.FC = () => {
                   adjustsFontSizeToFit
                   minimumFontScale={0.75}
                 >
-                  {subscriptionBalance ? `${formatHoursToHHMM(subscriptionBalance.total_hours_remaining || 0)} Tokens` : '0.00 Tokens'}
+                  {subscriptionBalance ? `${formatHoursToHHMM(subscriptionBalance.total_tokens_remaining || 0)} Tokens` : '0.00 Tokens'}
                 </Text>
               </View>
               <TouchableOpacity 
@@ -1090,7 +1106,7 @@ const BalanceScreen: React.FC = () => {
                     )}
                     {(selectedTransaction.billingBreakdown?.totalChargedMinutes || selectedTransaction.hours_deducted) && (
                       <View style={balanceScreenStyles.detailRow}>
-                        <Text style={balanceScreenStyles.detailLabel}>Hours Used:</Text>
+                        <Text style={balanceScreenStyles.detailLabel}>Duration:</Text>
                         <Text style={balanceScreenStyles.detailValue}>{formatDurationText(selectedTransaction)}</Text>
                       </View>
                     )}
@@ -1146,4 +1162,3 @@ const BalanceScreen: React.FC = () => {
 // Styles are now in balanceScreenStyles.ts
 
 export default BalanceScreen;
-

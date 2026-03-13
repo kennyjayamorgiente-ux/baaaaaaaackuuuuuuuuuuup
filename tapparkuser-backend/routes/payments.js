@@ -6,6 +6,16 @@ const { authenticateToken } = require('../middleware/auth');
 const { logUserActivity, ActionTypes } = require('../utils/userLogger');
 
 const router = express.Router();
+
+const getPlanTokensColumn = async () => {
+  const structure = await db.getTableStructure('plans');
+  const columns = new Set((structure || []).map((col) => col.Field));
+  const candidates = ['number_of_tokens', 'number_of_hours', 'tokens', 'hours'];
+  for (const candidate of candidates) {
+    if (columns.has(candidate)) return candidate;
+  }
+  return null;
+};
 const DEMO_TOPUP_ENABLED = process.env.ENABLE_DEMO_TOPUP === 'true';
 
 const topUpValidation = [
@@ -47,6 +57,13 @@ const resolvePaymentMethodId = async (paymentMethod) => {
 // Get payment history
 router.get('/history', authenticateToken, async (req, res) => {
   try {
+    const planTokensColumn = await getPlanTokensColumn();
+    if (!planTokensColumn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Plan token column not found'
+      });
+    }
     const page = parsePositiveInt(req.query.page, 1);
     const limit = parsePositiveInt(req.query.limit, 10);
     const type = req.query.type;
@@ -64,7 +81,7 @@ router.get('/history', authenticateToken, async (req, res) => {
         sub.plan_id,
         sub.user_id,
         plan.plan_name,
-        plan.number_of_hours
+        plan.${planTokensColumn} as number_of_tokens
       FROM payments p
       LEFT JOIN payment_method pm ON p.payment_method_id = pm.id
       LEFT JOIN subscriptions sub ON p.subscription_id = sub.subscription_id
@@ -139,7 +156,7 @@ router.post('/topup', authenticateToken, topUpValidation, async (req, res) => {
 
     await db.transaction([
       {
-        sql: 'UPDATE users SET hour_balance = hour_balance + ? WHERE user_id = ?',
+        sql: 'UPDATE users SET tokens = tokens + ? WHERE user_id = ?',
         params: [numericAmount, req.user.user_id]
       },
       {
@@ -152,7 +169,7 @@ router.post('/topup', authenticateToken, topUpValidation, async (req, res) => {
     ]);
 
     const user = await db.query(
-      'SELECT hour_balance as balance FROM users WHERE user_id = ?',
+      'SELECT tokens as balance FROM users WHERE user_id = ?',
       [req.user.user_id]
     );
 
@@ -192,7 +209,7 @@ router.post('/topup', authenticateToken, topUpValidation, async (req, res) => {
 router.get('/balance', authenticateToken, async (req, res) => {
   try {
     const user = await db.query(
-      'SELECT hour_balance as balance FROM users WHERE user_id = ?',
+      'SELECT tokens as balance FROM users WHERE user_id = ?',
       [req.user.user_id]
     );
 

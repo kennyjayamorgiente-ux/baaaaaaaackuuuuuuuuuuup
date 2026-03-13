@@ -7,15 +7,32 @@ const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
+const getPlanTokensColumn = async () => {
+  const structure = await db.getTableStructure('plans');
+  const columns = new Set((structure || []).map((col) => col.Field));
+  const candidates = ['number_of_tokens', 'number_of_hours', 'tokens', 'hours'];
+  for (const candidate of candidates) {
+    if (columns.has(candidate)) return candidate;
+  }
+  return null;
+};
+
 // Get all available subscription plans
 router.get('/plans', async (req, res) => {
   try {
+    const planTokensColumn = await getPlanTokensColumn();
+    if (!planTokensColumn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Plan token column not found'
+      });
+    }
     const plans = await db.query(`
       SELECT 
         plan_id,
         plan_name,
         cost,
-        number_of_hours,
+        ${planTokensColumn} as number_of_tokens,
         description
       FROM plans 
       ORDER BY cost ASC
@@ -52,8 +69,15 @@ router.post('/purchase', authenticateToken, [
     const { plan_id, payment_method_id } = req.body;
 
     // Get plan details
+    const planTokensColumn = await getPlanTokensColumn();
+    if (!planTokensColumn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Plan token column not found'
+      });
+    }
     const plans = await db.query(`
-      SELECT plan_id, plan_name, cost, number_of_hours 
+      SELECT plan_id, plan_name, cost, ${planTokensColumn} as number_of_tokens 
       FROM plans 
       WHERE plan_id = ?
     `, [plan_id]);
@@ -72,10 +96,10 @@ router.post('/purchase', authenticateToken, [
       // Create subscription
       {
         sql: `
-          INSERT INTO subscriptions (user_id, plan_id, hours_remaining, hours_used, status)
+          INSERT INTO subscriptions (user_id, plan_id, tokens_remaining, tokens_used, status)
           VALUES (?, ?, ?, 0, 'active')
         `,
-        params: [req.user.user_id, plan_id, plan.number_of_hours]
+        params: [req.user.user_id, plan_id, plan.number_of_tokens]
       },
       // Create payment record
       {
@@ -95,14 +119,14 @@ router.post('/purchase', authenticateToken, [
 
     let penaltyAdjustment = {
       penaltyAppliedHours: 0,
-      hoursAfterPenalty: plan.number_of_hours,
+      hoursAfterPenalty: plan.number_of_tokens,
       outstandingPenaltyHours: 0
     };
 
     if (subscriptionRecord.length > 0) {
       penaltyAdjustment = await settlePenaltyWithHours(
         req.user.user_id,
-        plan.number_of_hours,
+        plan.number_of_tokens,
         subscriptionRecord[0].subscription_id
       );
     }
@@ -110,7 +134,7 @@ router.post('/purchase', authenticateToken, [
     // Get updated balance after any penalty deduction
     const updatedBalance = await db.query(`
       SELECT 
-        COALESCE(SUM(hours_remaining), 0) as total_hours_remaining
+        COALESCE(SUM(tokens_remaining), 0) as total_hours_remaining
       FROM subscriptions s
       WHERE s.user_id = ? AND s.status = 'active'
     `, [req.user.user_id]);
@@ -120,7 +144,7 @@ router.post('/purchase', authenticateToken, [
       await logUserActivity(
         req.user.user_id,
         ActionTypes.SUBSCRIPTION_PURCHASE,
-        `Subscription purchased: ${plan.plan_name} - ${plan.number_of_hours} hours for ₱${plan.cost}`,
+        `Subscription purchased: ${plan.plan_name} - ${plan.number_of_tokens} tokens for ₱${plan.cost}`,
         subscriptionRecord[0].subscription_id
       );
     }
@@ -130,12 +154,12 @@ router.post('/purchase', authenticateToken, [
       message: 'Subscription purchased successfully',
       data: {
         plan_name: plan.plan_name,
-        hours_added: plan.number_of_hours,
+        tokens_added: plan.number_of_tokens,
         hours_after_penalty: penaltyAdjustment.hoursAfterPenalty,
         penalty_deducted_hours: penaltyAdjustment.penaltyAppliedHours,
         outstanding_penalty_hours: penaltyAdjustment.outstandingPenaltyHours,
         cost: plan.cost,
-        total_hours_remaining: updatedBalance[0]?.total_hours_remaining || 0
+        total_tokens_remaining: updatedBalance[0]?.total_hours_remaining || 0
       }
     });
 
@@ -154,23 +178,31 @@ router.get('/balance', authenticateToken, async (req, res) => {
     // Get total hours from active subscriptions
     const subscriptionBalance = await db.query(`
       SELECT 
-        COALESCE(SUM(s.hours_remaining), 0) as total_hours_remaining,
-        COALESCE(SUM(s.hours_used), 0) as total_hours_used,
+        COALESCE(SUM(s.tokens_remaining), 0) as total_tokens_remaining,
+        COALESCE(SUM(s.tokens_used), 0) as total_tokens_used,
         COUNT(s.subscription_id) as active_subscriptions
       FROM subscriptions s
-      WHERE s.user_id = ? AND s.status = 'active' AND s.hours_remaining > 0
+      WHERE s.user_id = ? AND s.status = 'active' AND s.tokens_remaining > 0
     `, [req.user.user_id]);
+
+    const planTokensColumn = await getPlanTokensColumn();
+    if (!planTokensColumn) {
+      return res.status(500).json({
+        success: false,
+        message: 'Plan token column not found'
+      });
+    }
 
     // Get detailed subscription info
     const subscriptionDetails = await db.query(`
       SELECT 
         s.subscription_id,
         s.purchase_date,
-        s.hours_remaining,
-        s.hours_used,
+        s.tokens_remaining as tokens_remaining,
+        s.tokens_used as tokens_used,
         p.plan_name,
         p.cost,
-        p.number_of_hours
+        p.${planTokensColumn} as number_of_tokens
       FROM subscriptions s
       JOIN plans p ON s.plan_id = p.plan_id
       WHERE s.user_id = ? AND s.status = 'active'
@@ -180,8 +212,8 @@ router.get('/balance', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       data: {
-        total_hours_remaining: subscriptionBalance[0].total_hours_remaining,
-        total_hours_used: subscriptionBalance[0].total_hours_used,
+        total_tokens_remaining: subscriptionBalance[0].total_tokens_remaining,
+        total_tokens_used: subscriptionBalance[0].total_tokens_used,
         active_subscriptions: subscriptionBalance[0].active_subscriptions,
         subscriptions: subscriptionDetails
       }
