@@ -873,6 +873,7 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
           r.start_time,
           r.time_stamp as created_at,
           v.plate_number,
+          v.vehicle_type,
           ps.spot_number,
           pa.parking_area_id as area_id,
           pa.parking_area_name,
@@ -898,7 +899,9 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
             r.parking_section_id,
             r.booking_status,
             r.start_time,
+            r.time_stamp as created_at,
             v.plate_number,
+            v.vehicle_type,
             r.spot_number,
             pa.parking_area_id as area_id,
             pa.parking_area_name,
@@ -926,6 +929,7 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
           r.start_time,
           r.time_stamp as created_at,
           v.plate_number,
+          v.vehicle_type,
           ps.spot_number,
           pa.parking_area_id as area_id,
           pa.parking_area_name,
@@ -953,6 +957,7 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
             r.start_time,
             r.time_stamp as created_at,
             v.plate_number,
+            v.vehicle_type,
             r.spot_number,
             pa.parking_area_id as area_id,
             pa.parking_area_name,
@@ -1063,14 +1068,28 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
     const balanceHours = subscriptionHours[0]?.total_hours_remaining || 0;
 
     // Calculate charge using active vehicle-type token rate (tokens per hour)
-    const rateRows = await db.query(`
-      SELECT deduction_rate
-      FROM vehicle_type_deduction_rates
-      WHERE vehicle_type_id = ? AND is_active = 1
-      ORDER BY updated_at DESC, created_at DESC
-      LIMIT 1
-    `, [reservationData.vehicle_type_id]);
-    const tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
+    let vehicleTypeId = null;
+    if (reservationData.vehicle_type) {
+      const vehicleTypeRows = await db.query(`
+        SELECT vehicle_type_id
+        FROM vehicle_types
+        WHERE vehicle_type_name = ?
+        LIMIT 1
+      `, [reservationData.vehicle_type]);
+      vehicleTypeId = vehicleTypeRows[0]?.vehicle_type_id ?? null;
+    }
+
+    let tableRate;
+    if (vehicleTypeId !== null) {
+      const rateRows = await db.query(`
+        SELECT deduction_rate
+        FROM vehicle_type_deduction_rates
+        WHERE vehicle_type_id = ? AND is_active = 1
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+      `, [vehicleTypeId]);
+      tableRate = rateRows.length > 0 ? Number(rateRows[0].deduction_rate) : undefined;
+    }
     const fallbackRate = 0;
     const hourlyRateUsed = typeof tableRate === 'number' && !Number.isNaN(tableRate) ? tableRate : fallbackRate;
     const chargeHours = durationHours * hourlyRateUsed;

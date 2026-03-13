@@ -88,6 +88,22 @@ const formatHoursToHHMM = (decimalHours: number): string => {
   return `${hours}.${minutes.toString().padStart(2, '0')}`;
 };
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return 'Not scanned';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not scanned';
+  return date.toLocaleString();
+};
+
+const formatChargedHours = (decimalHours: number): string => {
+  if (!decimalHours || decimalHours === 0) return '0 min';
+  const hours = Math.floor(decimalHours);
+  const minutes = Math.round((decimalHours - hours) * 60);
+  if (hours === 0 && minutes > 0) return `${minutes} min`;
+  if (hours > 0 && minutes === 0) return `${hours} hr`;
+  return `${hours} hr ${minutes} min`;
+};
+
 const isBookingNotOwnedError = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error || '');
   return (
@@ -3214,14 +3230,22 @@ const formatHoursToHHMM = (decimalHours: number): string => {
           }
           
           try {
-            const endDetailsResponse = await ApiService.getBookingDetails(latestBookingData.reservationId);
+            const endDetailsResponse = await ApiService.getBookingDetails(latestBookingData.reservationId, true);
             if (endDetailsResponse.success) {
               const details = endDetailsResponse.data as unknown as BookingDetails;
 
               const startTime = details.timestamps?.startTime ? new Date(details.timestamps.startTime) : new Date();
               const endTime = details.timestamps?.endTime ? new Date(details.timestamps.endTime) : new Date();
-              const durationMinutes = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60));
-              const durationHours = durationMinutes / 60;
+              const billingBreakdown = details.billingBreakdown || null;
+              const durationMinutes = typeof billingBreakdown?.totalChargedMinutes === 'number'
+                ? billingBreakdown.totalChargedMinutes
+                : Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+              const durationHours = typeof billingBreakdown?.totalChargedHours === 'number'
+                ? billingBreakdown.totalChargedHours
+                : durationMinutes / 60;
+              const chargeHours = typeof billingBreakdown?.tokensCharged === 'number'
+                ? billingBreakdown.tokensCharged
+                : durationHours;
 
               const balanceResponse = await ApiService.getUserHourBalance();
               const balanceHours = balanceResponse.success ? balanceResponse.data.total_hours_remaining : 0;
@@ -3231,16 +3255,26 @@ const formatHoursToHHMM = (decimalHours: number): string => {
               const penaltyHours = penaltyInfo?.penaltyHours || 0;
 
               setParkingEndDetails({
+                reservationId: details.reservationId,
                 durationMinutes,
                 durationHours,
-                chargeHours: durationHours,
+                chargeHours,
                 balanceHours,
                 startTime: startTime.toISOString(),
                 endTime: endTime.toISOString(),
                 areaName: details.parkingArea?.name || 'Unknown',
+                areaLocation: details.parkingArea?.location || '',
                 spotNumber: details.parkingSlot?.spotNumber || 'Unknown',
+                spotType: details.parkingSlot?.spotType || 'Unknown',
+                sectionName: details.parkingSlot?.sectionName || '',
+                vehicleType: details.vehicleDetails?.vehicleType || 'Unknown',
+                vehicleBrand: details.vehicleDetails?.brand || 'Unknown',
+                vehiclePlate: details.vehicleDetails?.plateNumber || 'Unknown',
+                bookingTime: details.timestamps?.bookingTime || null,
+                status: details.bookingStatus || 'completed',
                 hasPenalty,
-                penaltyHours
+                penaltyHours,
+                billingBreakdown
               });
               setShowParkingEndModal(true);
 
@@ -3263,6 +3297,7 @@ const formatHoursToHHMM = (decimalHours: number): string => {
             const durationHours = durationMinutes / 60;
 
             setParkingEndDetails({
+              reservationId: latestBookingData.reservationId,
               durationMinutes,
               durationHours,
               chargeHours: durationHours,
@@ -3270,7 +3305,15 @@ const formatHoursToHHMM = (decimalHours: number): string => {
               startTime: startTime.toISOString(),
               endTime: endTime.toISOString(),
               areaName: bookingData.parkingArea?.name || 'Unknown',
+              areaLocation: bookingData.parkingArea?.location || '',
               spotNumber: bookingData.parkingSlot?.spotNumber || 'Unknown',
+              spotType: bookingData.parkingSlot?.spotType || 'Unknown',
+              sectionName: bookingData.parkingSlot?.sectionName || '',
+              vehicleType: bookingData.vehicleDetails?.vehicleType || 'Unknown',
+              vehicleBrand: bookingData.vehicleDetails?.brand || 'Unknown',
+              vehiclePlate: bookingData.vehicleDetails?.plateNumber || 'Unknown',
+              bookingTime: bookingData.timestamps?.bookingTime || null,
+              status: bookingData.bookingStatus || 'completed',
               hasPenalty: false,
               penaltyHours: 0
             });
@@ -4914,31 +4957,44 @@ const formatHoursToHHMM = (decimalHours: number): string => {
               <Text style={activeParkingScreenStyles.parkingEndModalTitle}>Parking Session Ended</Text>
               
               {parkingEndDetails && (
-                <View style={activeParkingScreenStyles.parkingEndDetailsContainer}>
+                <ScrollView
+                  style={activeParkingScreenStyles.parkingEndDetailsContainer}
+                  contentContainerStyle={activeParkingScreenStyles.parkingEndDetailsContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View style={activeParkingScreenStyles.parkingEndHeroCard}>
+                    <Text style={activeParkingScreenStyles.parkingEndHeroEyebrow}>Session Closed</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndHeroLocation}>{parkingEndDetails.areaName}</Text>
+                    <View style={activeParkingScreenStyles.parkingEndHeroMetaRow}>
+                      <Text style={activeParkingScreenStyles.parkingEndHeroReservation}>RES-{parkingEndDetails.reservationId}</Text>
+                      <View style={activeParkingScreenStyles.parkingEndStatusBadge}>
+                        <Text style={activeParkingScreenStyles.parkingEndStatusBadgeText}>
+                          {String(parkingEndDetails.status || 'completed').toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                   <View style={activeParkingScreenStyles.parkingEndDetailRow}>
-                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Duration:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Start Scan</Text>
                     <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
-                      {formatDuration(parkingEndDetails.durationMinutes)}
+                      {formatDateTime(parkingEndDetails.startTime)}
                     </Text>
                   </View>
                   
                   <View style={activeParkingScreenStyles.parkingEndDetailRow}>
-                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Hours Deducted:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>End Scan:</Text>
                     <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
-                      {(() => {
-                        const hours = Math.floor(parkingEndDetails.chargeHours);
-                        const minutes = Math.round((parkingEndDetails.chargeHours - hours) * 60);
-                        
-                        if (hours === 0 && minutes > 0) {
-                          return `${minutes} min`;
-                        } else if (hours > 0 && minutes === 0) {
-                          return `${hours} hr${hours >= 1 ? 's' : ''}`;
-                        } else {
-                          return `${hours} hr${hours >= 1 ? 's' : ''} ${minutes} min`;
-                        }
-                      })()}
+                      {formatDateTime(parkingEndDetails.endTime)}
                     </Text>
                   </View>
+                  <Text style={activeParkingScreenStyles.parkingEndSectionNote}>
+                    Duration: {formatDuration(parkingEndDetails.durationMinutes)}
+                  </Text>
+                  <Text style={activeParkingScreenStyles.parkingEndSectionNote}>
+                    Tokens Deducted: {typeof parkingEndDetails.chargeHours === 'number'
+                      ? `${parkingEndDetails.chargeHours.toFixed(2)} Tokens`
+                      : 'N/A'}
+                  </Text>
                   
                   {/* Billing Breakdown - only show if available */}
                   {parkingEndDetails.billingBreakdown && (
@@ -4959,9 +5015,25 @@ const formatHoursToHHMM = (decimalHours: number): string => {
                       <View style={[activeParkingScreenStyles.billingBreakdownRow, activeParkingScreenStyles.billingBreakdownTotal]}>
                         <Text style={activeParkingScreenStyles.billingBreakdownLabel}>Total Charged:</Text>
                         <Text style={activeParkingScreenStyles.billingBreakdownValue}>
-                          {parkingEndDetails.billingBreakdown.totalChargedHours.toFixed(2)} hrs
+                          {formatChargedHours(parkingEndDetails.billingBreakdown.totalChargedHours)}
                         </Text>
                       </View>
+                      <View style={activeParkingScreenStyles.billingBreakdownRow}>
+                        <Text style={activeParkingScreenStyles.billingBreakdownLabel}>Tokens Deducted:</Text>
+                        <Text style={activeParkingScreenStyles.billingBreakdownValue}>
+                          {typeof parkingEndDetails.billingBreakdown.tokensCharged === 'number'
+                            ? `${parkingEndDetails.billingBreakdown.tokensCharged.toFixed(2)} Tokens`
+                            : `${parkingEndDetails.billingBreakdown.totalChargedMinutes} Tokens`}
+                        </Text>
+                      </View>
+                      {typeof parkingEndDetails.billingBreakdown.hourlyRateUsed === 'number' && (
+                        <View style={activeParkingScreenStyles.billingBreakdownRow}>
+                          <Text style={activeParkingScreenStyles.billingBreakdownLabel}>Rate:</Text>
+                          <Text style={activeParkingScreenStyles.billingBreakdownValue}>
+                            {parkingEndDetails.billingBreakdown.hourlyRateUsed.toFixed(2)} tokens/hour
+                          </Text>
+                        </View>
+                      )}
                       <Text style={activeParkingScreenStyles.billingBreakdownFormula}>
                         {parkingEndDetails.billingBreakdown.breakdown}
                       </Text>
@@ -4972,6 +5044,49 @@ const formatHoursToHHMM = (decimalHours: number): string => {
                     <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Remaining Balance:</Text>
                     <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
                       {formatHoursToHHMM(parkingEndDetails.balanceHours)} hr{parkingEndDetails.balanceHours >= 1 ? 's' : ''}
+                    </Text>
+                  </View>
+
+                  <View style={activeParkingScreenStyles.parkingEndDetailRow}>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Vehicle:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
+                      {parkingEndDetails.vehicleType} - {parkingEndDetails.vehicleBrand}
+                    </Text>
+                  </View>
+
+                  <View style={activeParkingScreenStyles.parkingEndDetailRow}>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Plate Number:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
+                      {parkingEndDetails.vehiclePlate}
+                    </Text>
+                  </View>
+
+                  <View style={activeParkingScreenStyles.parkingEndDetailRow}>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Parking Spot:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
+                      Spot {parkingEndDetails.spotNumber}
+                    </Text>
+                  </View>
+
+                  <View style={activeParkingScreenStyles.parkingEndDetailRow}>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Spot Type:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
+                      {parkingEndDetails.spotType}
+                      {parkingEndDetails.sectionName ? ` • ${parkingEndDetails.sectionName}` : ''}
+                    </Text>
+                  </View>
+
+                  <View style={activeParkingScreenStyles.parkingEndDetailRow}>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Date:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
+                      {formatDateTime(parkingEndDetails.bookingTime)}
+                    </Text>
+                  </View>
+
+                  <View style={activeParkingScreenStyles.parkingEndDetailRow}>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Status:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
+                      {String(parkingEndDetails.status || 'completed').toUpperCase()}
                     </Text>
                   </View>
                   
@@ -5010,12 +5125,12 @@ const formatHoursToHHMM = (decimalHours: number): string => {
                   </View>
                   
                   <View style={activeParkingScreenStyles.parkingEndDetailRow}>
-                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Spot Number:</Text>
+                    <Text style={activeParkingScreenStyles.parkingEndDetailLabel}>Location:</Text>
                     <Text style={activeParkingScreenStyles.parkingEndDetailValue}>
-                      {parkingEndDetails.spotNumber}
+                      {parkingEndDetails.areaLocation || 'Location unavailable'}
                     </Text>
                   </View>
-                </View>
+                </ScrollView>
               )}
               
               <TouchableOpacity 

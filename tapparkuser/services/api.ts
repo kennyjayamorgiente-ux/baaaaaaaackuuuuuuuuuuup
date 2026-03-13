@@ -1305,6 +1305,8 @@ export class ApiService {
           totalChargedHours: number;
           totalChargedMinutes: number;
           breakdown: string;
+          hourlyRateUsed?: number;
+          tokensCharged?: number;
         } | null;
       };
     }>(endpoint, {}, 5000, onRevalidate); // 5s stale time to prevent 429 spam during polling

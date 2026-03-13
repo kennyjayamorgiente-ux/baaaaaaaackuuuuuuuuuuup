@@ -1235,13 +1235,81 @@ router.get('/booking/:reservationId', authenticateToken, async (req, res) => {
       }
     }
 
-    // Calculate billing breakdown for expired reservations
+    // Calculate billing breakdown for completed or expired reservations
     let billingBreakdown = null;
     if (req.query.includeBilling === 'true' || req.query.includeBilling === true) {
       const isExpired = booking.booking_status === 'invalid';
+      const isCompleted = booking.booking_status === 'completed' && booking.start_time && booking.end_time;
       const alreadyProcessedExpired = isExpired && !!booking.waiting_end_time;
 
-      if (isExpired) {
+      if (isCompleted) {
+        try {
+          const [durationData] = await db.query(`
+            SELECT 
+              r.reservation_id,
+              r.user_id,
+              r.time_stamp AS created_at,
+              r.start_time,
+              r.end_time,
+              ROUND(TIMESTAMPDIFF(SECOND, r.time_stamp, r.end_time) / 3600, 4) AS total_hours,
+              ROUND(TIMESTAMPDIFF(SECOND, r.time_stamp, r.start_time) / 3600, 4) AS wait_hours,
+              ROUND(TIMESTAMPDIFF(SECOND, r.start_time, r.end_time) / 3600, 4) AS parking_hours
+            FROM reservations r
+            WHERE r.reservation_id = ? AND r.user_id = ?
+              AND r.start_time IS NOT NULL
+              AND r.end_time IS NOT NULL
+            LIMIT 1
+          `, [booking.reservation_id, req.user.user_id]);
+
+          if (durationData) {
+            const waitTime = parseFloat(durationData.wait_hours ?? 0);
+            const parkingTime = parseFloat(durationData.parking_hours ?? 0);
+            const totalChargedHours = Math.max(0.0167, parseFloat(durationData.total_hours ?? 0));
+            const waitMinutes = Math.round(waitTime * 60);
+            const parkingMinutes = Math.round(parkingTime * 60);
+            const totalChargedMinutes = Math.round(totalChargedHours * 60);
+
+            billingBreakdown = {
+              waitTimeHours: waitTime,
+              waitTimeMinutes: waitMinutes,
+              parkingTimeHours: parkingTime,
+              parkingTimeMinutes: parkingMinutes,
+              totalChargedHours,
+              totalChargedMinutes,
+              breakdown: `Wait time: ${waitMinutes} min + Parking time: ${parkingMinutes} min = ${totalChargedHours.toFixed(2)} hrs charged`
+            };
+
+            try {
+              const [vtIdRow] = await db.query(`
+                SELECT vehicle_type_id
+                FROM vehicle_types
+                WHERE vehicle_type_name = ?
+                LIMIT 1
+              `, [booking.vehicle_type]);
+              const vehicleTypeId = vtIdRow?.vehicle_type_id;
+              let hourlyRateUsed = 0;
+              if (vehicleTypeId) {
+                const rateRows = await db.query(`
+                  SELECT deduction_rate
+                  FROM vehicle_type_deduction_rates
+                  WHERE vehicle_type_id = ? AND is_active = 1
+                  ORDER BY updated_at DESC, created_at DESC
+                  LIMIT 1
+                `, [vehicleTypeId]);
+                if (rateRows.length > 0) {
+                  hourlyRateUsed = Number(rateRows[0].deduction_rate) || 0;
+                }
+              }
+              billingBreakdown.hourlyRateUsed = hourlyRateUsed;
+              billingBreakdown.tokensCharged = Number((totalChargedHours * hourlyRateUsed).toFixed(2));
+            } catch (rateErr) {
+              billingBreakdown.tokensCharged = Number(totalChargedHours.toFixed(2));
+            }
+          }
+        } catch (error) {
+          console.error('Error in completed billing calculation:', error);
+        }
+      } else if (isExpired) {
         console.log('💰 Calculating billing breakdown for expired reservation (explicit request)');
 
         const [durationData] = await db.query(`
