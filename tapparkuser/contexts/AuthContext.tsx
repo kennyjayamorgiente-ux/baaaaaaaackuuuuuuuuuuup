@@ -8,6 +8,7 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
+  external_user_id?: string;
   profile_image?: string;
   profile_image_url?: string;
   tokens: number;
@@ -20,7 +21,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  login: (identifier: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   logout: () => Promise<void>;
   checkAuthStatus: () => Promise<void>;
 }
@@ -100,14 +101,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
+  const login = async (identifier: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
     try {
       setIsLoading(true);
 
       // Avoid carrying old realtime subscriptions/session state across account switches.
       resetRealtimeAndCache();
 
-      const response = await ApiService.login(email, password);
+      const response = await ApiService.login(identifier, password);
 
       if (response.success && response.data && response.data.user) {
         const normalizedUser = normalizeUserProfileImageFields(response.data.user) as User;
@@ -116,7 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: true, user: normalizedUser };
       }
 
-      return { success: false, error: response.message || 'Invalid email or password' };
+      return { success: false, error: response.message || 'Invalid ID number or password' };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Network error. Please check your connection and try again.';
       return { success: false, error: errorMessage };

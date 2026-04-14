@@ -33,6 +33,32 @@ export class ApiService {
   }>();
   private static swrPendingRequests = new Map<string, Promise<any>>();
   private static revalidationCallbacks = new Map<string, Array<(data: any) => void>>();
+  private static readonly USER_FACING_ERROR_PATTERNS = [
+    'current password is incorrect',
+    'invalid id number or password',
+    'invalid email or password',
+    'password is required',
+    'id number is required',
+    'email is required',
+    'please enter a valid email address',
+    'new password and confirm password do not match',
+    'new password must be at least 6 characters long',
+    'new password must be different from current password',
+    'user with this email already exists',
+    'this school id is already linked to an existing account',
+    'lookup required',
+    'id number not found in tappark mis',
+    'tappark lookup failed',
+    'validation failed',
+    'bad request',
+    'access denied',
+    'booking not found',
+    'not available',
+    'no longer available',
+    'you have no remaining subscription hours',
+    'penalty hours outstanding',
+    'please purchase a plan',
+  ];
   
   // Clear cache method
   static clearCache(): void {
@@ -216,6 +242,13 @@ export class ApiService {
     const middle = '*'.repeat(Math.min(token.length - 8, 12));
     return `${start}${middle}${end}`;
   }
+
+  private static isUserFacingErrorMessage(message: string): boolean {
+    const normalizedMessage = String(message || '').toLowerCase();
+    return this.USER_FACING_ERROR_PATTERNS.some((pattern) =>
+      normalizedMessage.includes(pattern)
+    );
+  }
   
   // Helper function to add timeout to fetch with retry logic
   private static async fetchWithTimeout(
@@ -397,7 +430,11 @@ export class ApiService {
         if (response.status === 403) {
           const errorMessage = data.message || data.error || 'Access denied';
           // Don't log as error for business logic responses
-          if (data.errorCode === 'INSUFFICIENT_BALANCE' || data.errorCode === 'OUTSTANDING_PENALTY') {
+          if (
+            data.errorCode === 'INSUFFICIENT_BALANCE' ||
+            data.errorCode === 'OUTSTANDING_PENALTY' ||
+            this.isUserFacingErrorMessage(errorMessage)
+          ) {
             console.log(`📋 Business Logic Response (${response.status}):`, errorMessage);
           } else {
             console.error(`❌ API Error (${response.status}):`, errorMessage);
@@ -407,10 +444,8 @@ export class ApiService {
         // Handle 400 Bad Request - check if it's a spot availability error
         if (response.status === 400) {
           const errorMessage = data.message || data.error || 'Bad request';
-          // Don't log as error for spot availability issues
-          if (errorMessage.includes('no longer available') || 
-              errorMessage.includes('not available') ||
-              errorMessage.includes('spot is no longer available')) {
+          // Don't log as error for user-facing validation/business logic issues
+          if (this.isUserFacingErrorMessage(errorMessage)) {
             console.log(`📋 Business Logic Response (${response.status}):`, errorMessage);
           } else {
             console.error(`❌ API Error (${response.status}):`, errorMessage);
@@ -442,7 +477,10 @@ export class ApiService {
     } catch (error) {
       // Handle network errors (connection refused, timeout, etc.)
       // Check for various network error patterns
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const rawErrorMessage = error instanceof Error ? (error as any).message : error;
+      const errorMessage = typeof rawErrorMessage === 'string'
+        ? rawErrorMessage
+        : String(rawErrorMessage ?? '');
       const errorString = String(error);
       
       if (
@@ -494,15 +532,8 @@ export class ApiService {
           console.log('⏳ Request throttled:', error.message);
           throw error;
         }
-        // Don't log as error for business logic responses
-        if (error.message.includes('You have no remaining subscription hours') ||
-            error.message.includes('penalty hours outstanding') ||
-            error.message.includes('Please purchase a plan') ||
-            error.message.includes('Booking not found or does not belong to user') ||
-            error.message.includes('Booking not found') ||
-            error.message.includes('no longer available') ||
-            error.message.includes('not available') ||
-            error.message.includes('spot is no longer available')) {
+        // Don't log as error for business logic / user-facing validation responses
+        if (this.isUserFacingErrorMessage(error.message)) {
           // SILENT - no logging for business logic
         } else {
           console.error('❌ API Request failed:', error.message);
@@ -511,16 +542,8 @@ export class ApiService {
       }
       
       // Don't log business logic errors as errors
-      const isBusinessLogicError = error instanceof Error && (
-        error.message.includes('You have no remaining subscription hours') ||
-        error.message.includes('penalty hours outstanding') ||
-        error.message.includes('Please purchase a plan') ||
-        error.message.includes('Booking not found or does not belong to user') ||
-        error.message.includes('Booking not found') ||
-        error.message.includes('no longer available') ||
-        error.message.includes('not available') ||
-        error.message.includes('spot is no longer available')
-      );
+      const isBusinessLogicError =
+        error instanceof Error && this.isUserFacingErrorMessage(error.message);
       
       if (isBusinessLogicError) {
         // SILENT - no logging for business logic
@@ -597,7 +620,7 @@ export class ApiService {
   }
 
   // Authentication endpoints
-  static async login(email: string, password: string) {
+  static async login(identifier: string, password: string) {
     const response = await this.request<{
       success: boolean;
       message: string;
@@ -607,6 +630,7 @@ export class ApiService {
           email: string;
           first_name: string;
           last_name: string;
+          external_user_id?: string;
           tokens: number;
           type_id: number;
           account_type_name: string;
@@ -616,7 +640,7 @@ export class ApiService {
       };
     }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, password }),
     });
 
     // Store token after successful login
@@ -637,6 +661,9 @@ export class ApiService {
     firstName: string;
     lastName: string;
     phone?: string;
+    externalId?: string;
+    externalSource?: string;
+    externalType?: 'student' | 'employee';
   }) {
     const response = await this.request<{
       success: boolean;
@@ -648,6 +675,9 @@ export class ApiService {
           firstName: string;
           lastName: string;
           phone?: string;
+          externalId?: string | null;
+          externalSource?: string | null;
+          externalType?: 'student' | 'employee' | null;
           isVerified: boolean;
         };
         token: string;
@@ -663,6 +693,29 @@ export class ApiService {
     }
 
     return response;
+  }
+
+  static async lookupTapparkId(idNumber: string, type?: 'student' | 'employee') {
+    return this.request<{
+      success: boolean;
+      message: string;
+      data: {
+        external_id: string;
+        external_type: 'student' | 'employee';
+        external_source: string;
+        first_name: string;
+        middle_name?: string;
+        last_name: string;
+        email?: string;
+        raw: Record<string, any>;
+      };
+    }>('/tappark/lookup-id', {
+      method: 'POST',
+      body: JSON.stringify({
+        idNumber,
+        ...(type ? { type } : {}),
+      }),
+    });
   }
 
   static async logout() {
@@ -687,6 +740,7 @@ export class ApiService {
           email: string;
           first_name: string;
           last_name: string;
+          external_user_id?: string;
           phone?: string;
           profile_image?: string;
           tokens: number;

@@ -19,11 +19,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SvgXml } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { carIconSvg } from '../assets/icons/index2';
 import { loginStyles } from '../styles/loginStyles';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import ApiService from '../../services/api';
+
+const REMEMBER_ME_KEY = 'tappark_remember_me';
+const REMEMBERED_IDENTIFIER_KEY = 'tappark_remembered_identifier';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -76,15 +80,16 @@ export default function LoginScreen() {
   
   // Refs for scrolling
   const scrollViewRef = React.useRef<ScrollView>(null);
-  const emailInputRef = React.useRef<TextInput>(null);
+  const idNumberInputRef = React.useRef<TextInput>(null);
   const passwordInputRef = React.useRef<TextInput>(null);
   
   // State for form inputs
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   
   // State for validation errors
-  const [emailError, setEmailError] = useState('');
+  const [identifierError, setIdentifierError] = useState('');
   const [generalError, setGeneralError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -108,24 +113,40 @@ export default function LoginScreen() {
     return () => pulse.stop();
   }, []);
 
+  React.useEffect(() => {
+    const loadRememberedLogin = async () => {
+      try {
+        const [storedRememberMe, storedIdentifier] = await Promise.all([
+          AsyncStorage.getItem(REMEMBER_ME_KEY),
+          AsyncStorage.getItem(REMEMBERED_IDENTIFIER_KEY),
+        ]);
+
+        const shouldRemember = storedRememberMe !== 'false';
+        setRememberMe(shouldRemember);
+
+        if (shouldRemember && storedIdentifier) {
+          setIdentifier(storedIdentifier);
+        }
+      } catch (error) {
+        console.warn('Failed to load remember me state:', error);
+      }
+    };
+
+    loadRememberedLogin();
+  }, []);
+
 
   const handleLogin = async () => {
     // Clear previous errors
-    setEmailError('');
+    setIdentifierError('');
     setGeneralError('');
     
     let hasErrors = false;
 
-    // Validate email
-    if (!email.trim()) {
-      setEmailError('Email is required');
+    // Validate ID number
+    if (!identifier.trim()) {
+      setIdentifierError('ID Number is required');
       hasErrors = true;
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setEmailError('Please enter a valid email address');
-        hasErrors = true;
-      }
     }
 
     // Validate password
@@ -140,9 +161,24 @@ export default function LoginScreen() {
 
     try {
       setIsLoggingIn(true);
-      const result = await login(email.trim(), password);
+      const result = await login(identifier.trim(), password);
       
       if (result.success && result.user) {
+        try {
+          if (rememberMe) {
+            await AsyncStorage.setItem(REMEMBER_ME_KEY, 'true');
+            await AsyncStorage.setItem(
+              REMEMBERED_IDENTIFIER_KEY,
+              identifier.trim()
+            );
+          } else {
+            await AsyncStorage.removeItem(REMEMBER_ME_KEY);
+            await AsyncStorage.removeItem(REMEMBERED_IDENTIFIER_KEY);
+          }
+        } catch (storageError) {
+          console.warn('Failed to persist remember me state:', storageError);
+        }
+
         // Debug: Log the user data to see what we're getting
         console.log('Login result user:', result.user);
         console.log('Account type name:', result.user.account_type_name);
@@ -178,7 +214,7 @@ export default function LoginScreen() {
         );
       } else {
         // Show general invalid credentials error
-        setGeneralError('Invalid email or password');
+        setGeneralError('Invalid ID number or password');
         setIsLoggingIn(false);
       }
     } catch (error) {
@@ -189,7 +225,7 @@ export default function LoginScreen() {
       if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('connection')) {
         setGeneralError('Network error. Please check your connection and try again.');
       } else {
-        setGeneralError('Invalid email or password');
+        setGeneralError('Invalid ID number or password');
       }
       setIsLoggingIn(false);
     }
@@ -253,26 +289,25 @@ export default function LoginScreen() {
           {/* Input Fields */}
           <View style={styles.inputSection}>
             <TextInput
-              ref={emailInputRef}
+              ref={idNumberInputRef}
               style={[styles.inputField, { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text }]}
-              placeholder="Email"
+              placeholder="ID Number"
               placeholderTextColor={colors.textMuted}
               selectionColor={colors.primary}
-              value={email}
+              value={identifier}
               onChangeText={(text) => {
-                setEmail(text);
-                if (emailError) setEmailError(''); // Clear error when user starts typing
+                setIdentifier(text);
+                if (identifierError) setIdentifierError(''); // Clear error when user starts typing
               }}
               onFocus={() => {
                 setTimeout(() => {
                   scrollViewRef.current?.scrollTo({ y: 200, animated: true });
                 }, 100);
               }}
-              keyboardType="email-address"
-              autoCapitalize="none"
+              autoCapitalize="characters"
               autoCorrect={false}
             />
-            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+            {identifierError ? <Text style={styles.errorText}>{identifierError}</Text> : null}
             
             <View style={[styles.passwordContainer, { backgroundColor: colors.card, borderColor: colors.primary }]}>
               <TextInput
@@ -307,6 +342,29 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
             {generalError ? <Text style={styles.errorText}>{generalError}</Text> : null}
+
+            <TouchableOpacity
+              style={styles.rememberMeRow}
+              activeOpacity={0.8}
+              onPress={() => setRememberMe((current) => !current)}
+            >
+              <View
+                style={[
+                  styles.rememberMeCheckbox,
+                  {
+                    borderColor: rememberMe ? colors.primary : colors.textMuted,
+                    backgroundColor: rememberMe ? colors.primary : 'transparent',
+                  },
+                ]}
+              >
+                {rememberMe ? (
+                  <Ionicons name="checkmark" size={14} color={colors.textInverse} />
+                ) : null}
+              </View>
+              <Text style={[styles.rememberMeText, { color: colors.textSecondary }]}>
+                Remember Me
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Bottom Section - Buttons */}

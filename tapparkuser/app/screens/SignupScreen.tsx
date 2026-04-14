@@ -24,6 +24,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import ApiService from '../../services/api';
 
+type ExternalIdentity = {
+  externalId: string;
+  externalSource: string;
+  externalType: 'student' | 'employee';
+};
+
 const { width: screenWidth } = Dimensions.get('window');
 
 // Enhanced responsive calculations
@@ -40,6 +46,26 @@ const getResponsiveSize = (baseSize: number) => {
   if (isTablet) return baseSize * 1.05;
   if (isLargeTablet) return baseSize * 1.1;
   return baseSize;
+};
+
+const normalizeEmailPart = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+    .replace(/\.{2,}/g, '.');
+
+const buildFoundationEmail = (firstName: string, lastName: string) => {
+  const first = normalizeEmailPart(firstName);
+  const last = normalizeEmailPart(lastName);
+
+  if (!first || !last) {
+    return '';
+  }
+
+  return `${first}.${last}@foundationu.com`;
 };
 
 // Circle Glow SVG - Using the actual Circle Glow.svg file
@@ -77,6 +103,8 @@ export default function SignupScreen() {
   const lastNameRef = useRef(null);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
+  const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestLookupIdRef = useRef('');
   
   // State for form inputs
   const [schoolId, setSchoolId] = useState('');
@@ -85,6 +113,9 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLookingUpId, setIsLookingUpId] = useState(false);
+  const [lookupStatus, setLookupStatus] = useState('');
+  const [externalIdentity, setExternalIdentity] = useState<ExternalIdentity | null>(null);
   
   // State for screen dimensions
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
@@ -119,14 +150,127 @@ export default function SignupScreen() {
     return () => subscription?.remove();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (lookupTimeoutRef.current) {
+        clearTimeout(lookupTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleGoBack = () => {
     router.back();
   };
+
+  const handleLookupSchoolId = async (inputId?: string) => {
+    const normalizedSchoolId = (inputId ?? schoolId).trim();
+
+    if (!normalizedSchoolId) {
+      return;
+    }
+
+    try {
+      latestLookupIdRef.current = normalizedSchoolId;
+      setIsLookingUpId(true);
+      setLookupStatus('Looking up record...');
+
+      const response = await ApiService.lookupTapparkId(normalizedSchoolId);
+      console.log('🎓 Tappark lookup response:', response);
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'ID lookup failed');
+      }
+
+      if (latestLookupIdRef.current !== normalizedSchoolId) {
+        return;
+      }
+
+      const profile = response.data;
+      console.log('🎓 Tappark normalized profile:', profile);
+      const resolvedFirstName = profile.first_name || '';
+      const resolvedLastName = profile.last_name || '';
+      const generatedEmail = buildFoundationEmail(
+        resolvedFirstName,
+        resolvedLastName
+      );
+
+      setFirstName(resolvedFirstName);
+      setLastName(resolvedLastName);
+      setEmail(generatedEmail);
+      setExternalIdentity({
+        externalId: profile.external_id,
+        externalSource: profile.external_source,
+        externalType: profile.external_type,
+      });
+      setLookupStatus(
+        `${profile.external_type === 'employee' ? 'Employee' : 'Student'} record found`
+      );
+    } catch (error) {
+      if (latestLookupIdRef.current !== normalizedSchoolId) {
+        return;
+      }
+      setExternalIdentity(null);
+      setLookupStatus(
+        error instanceof Error ? error.message : 'Unable to find that ID right now.'
+      );
+    } finally {
+      if (latestLookupIdRef.current === normalizedSchoolId) {
+        setIsLookingUpId(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const normalizedSchoolId = schoolId.trim();
+
+    if (lookupTimeoutRef.current) {
+      clearTimeout(lookupTimeoutRef.current);
+      lookupTimeoutRef.current = null;
+    }
+
+    if (!normalizedSchoolId) {
+      latestLookupIdRef.current = '';
+      setLookupStatus('');
+      setExternalIdentity(null);
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      return;
+    }
+
+    if (externalIdentity?.externalId === normalizedSchoolId) {
+      return;
+    }
+
+    if (normalizedSchoolId.length < 4) {
+      setLookupStatus('');
+      setExternalIdentity(null);
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      return;
+    }
+
+    lookupTimeoutRef.current = setTimeout(() => {
+      handleLookupSchoolId(normalizedSchoolId);
+    }, 700);
+
+    return () => {
+      if (lookupTimeoutRef.current) {
+        clearTimeout(lookupTimeoutRef.current);
+        lookupTimeoutRef.current = null;
+      }
+    };
+  }, [schoolId]);
 
   const handleSignup = async () => {
     // Validate inputs
     if (!schoolId.trim() || !firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (!externalIdentity || externalIdentity.externalId !== schoolId.trim()) {
+      Alert.alert('Lookup Required', 'Please look up your school or employee ID before signing up.');
       return;
     }
 
@@ -150,8 +294,10 @@ export default function SignupScreen() {
         email: email.trim(),
         password,
         firstName: firstName.trim(),
-        lastName: lastName.trim()
-        // Note: School ID is collected but not sent to backend (no phone field in database)
+        lastName: lastName.trim(),
+        externalId: externalIdentity.externalId,
+        externalSource: externalIdentity.externalSource,
+        externalType: externalIdentity.externalType,
       });
       
       if (response.success) {
@@ -258,16 +404,43 @@ export default function SignupScreen() {
                 <TextInput
                   ref={schoolIdRef} // <-- Assign Ref
                   style={[styles.inputField, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-                  placeholder="School ID:"
+                  placeholder="School or Employee ID:"
                   placeholderTextColor={colors.textMuted}
                   selectionColor={colors.primary}
                   value={schoolId}
-                  onChangeText={setSchoolId}
+                  onChangeText={(value) => {
+                    setSchoolId(value);
+                    setLookupStatus('');
+                    setExternalIdentity((current) => {
+                      if (!current) return null;
+                      return current.externalId === value.trim() ? current : null;
+                    });
+                    if (externalIdentity?.externalId !== value.trim()) {
+                      setFirstName('');
+                      setLastName('');
+                      setEmail('');
+                    }
+                  }}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  returnKeyType="next" // <-- Set Next
-                  onSubmitEditing={() => firstNameRef.current.focus()} // <-- Focus next input
+                  returnKeyType="next"
+                  onSubmitEditing={() => firstNameRef.current.focus()}
                 />
+                {lookupStatus ? (
+                  <Text
+                    style={[
+                      styles.parkWithEaseText,
+                      {
+                        marginBottom: 12,
+                        color: lookupStatus.toLowerCase().includes('found')
+                          ? colors.primary
+                          : colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {lookupStatus}
+                  </Text>
+                ) : null}
                 <TextInput
                   ref={firstNameRef}
                   style={[styles.inputField, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
@@ -275,6 +448,7 @@ export default function SignupScreen() {
                   placeholderTextColor={colors.textMuted}
                   selectionColor={colors.primary}
                   value={firstName}
+                  editable={!externalIdentity}
                   onChangeText={setFirstName}
                   autoCapitalize="words"
                   autoCorrect={false}
@@ -288,6 +462,7 @@ export default function SignupScreen() {
                   placeholderTextColor={colors.textMuted}
                   selectionColor={colors.primary}
                   value={lastName}
+                  editable={!externalIdentity}
                   onChangeText={setLastName}
                   autoCapitalize="words"
                   autoCorrect={false}
@@ -302,6 +477,7 @@ export default function SignupScreen() {
                   selectionColor={colors.primary}
                   keyboardType="email-address"
                   value={email}
+                  editable={!externalIdentity}
                   onChangeText={setEmail}
                   autoCapitalize="none"
                   autoCorrect={false}

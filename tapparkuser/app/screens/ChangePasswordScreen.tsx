@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   Dimensions,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
@@ -21,6 +20,7 @@ import {
 } from '../assets/icons/index2';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors, useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
 import { useLoading } from '../../contexts/LoadingContext';
 import ApiService from '../../services/api';
 import { useScreenDimensions } from '../../hooks/use-screen-dimensions';
@@ -76,6 +76,7 @@ const ChangePasswordScreen: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
   const colors = useThemeColors();
+  const { showToast } = useToast();
   const { showLoading, hideLoading } = useLoading();
   const { isDarkMode } = useTheme();
   const screenDimensions = useScreenDimensions();
@@ -132,23 +133,23 @@ const ChangePasswordScreen: React.FC = () => {
 
   const validateInputs = () => {
     if (!currentPassword.trim()) {
-      Alert.alert('Error', 'Please enter your current password');
+      showToast('Please enter your current password', { title: 'Missing Field', tone: 'error' });
       return false;
     }
     if (!newPassword.trim()) {
-      Alert.alert('Error', 'Please enter a new password');
+      showToast('Please enter a new password', { title: 'Missing Field', tone: 'error' });
       return false;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
+      showToast('New password must be at least 6 characters long', { title: 'Invalid Password', tone: 'error' });
       return false;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New password and confirm password do not match');
+      showToast('New password and confirm password do not match', { title: 'Password Mismatch', tone: 'error' });
       return false;
     }
     if (currentPassword === newPassword) {
-      Alert.alert('Error', 'New password must be different from current password');
+      showToast('New password must be different from current password', { title: 'Invalid Password', tone: 'error' });
       return false;
     }
     return true;
@@ -164,31 +165,29 @@ const ChangePasswordScreen: React.FC = () => {
       const response = await ApiService.changePassword(currentPassword, newPassword);
 
       if (response.success) {
-        Alert.alert(
-          'Success',
-          'Password changed successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Clear form
-                setCurrentPassword('');
-                setNewPassword('');
-                setConfirmPassword('');
-                // Navigate back
-                router.back();
-              }
-            }
-          ]
-        );
+        showToast('Password changed successfully!', {
+          title: 'Success',
+          tone: 'success',
+        });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => {
+          router.back();
+        }, 400);
       } else {
-        Alert.alert('Error', response.message || 'Failed to change password');
+        showToast(response.message || 'Failed to change password', {
+          title: 'Change Failed',
+          tone: 'error',
+        });
       }
     } catch (error) {
-      console.error('Change password error:', error);
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to change password. Please try again.'
+      showToast(
+        error instanceof Error ? error.message : 'Failed to change password. Please try again.',
+        {
+          title: 'Change Failed',
+          tone: 'error',
+        }
       );
     } finally {
       setIsLoading(false);
@@ -449,4 +448,3 @@ const getStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.crea
 });
 
 export default ChangePasswordScreen;
-

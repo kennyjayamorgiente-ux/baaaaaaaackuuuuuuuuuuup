@@ -53,14 +53,39 @@ const registerValidation = [
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('firstName').trim().isLength({ min: 1 }).withMessage('First name is required'),
-  body('lastName').trim().isLength({ min: 1 }).withMessage('Last name is required')
+  body('lastName').trim().isLength({ min: 1 }).withMessage('Last name is required'),
+  body('externalId').optional().trim().isLength({ min: 1 }).withMessage('External ID cannot be empty'),
+  body('externalSource').optional().trim().isLength({ min: 1 }).withMessage('External source cannot be empty'),
+  body('externalType').optional().isIn(['student', 'employee']).withMessage('External type must be student or employee')
   // Phone field is optional and will be stored as provided
 ];
 
 const loginValidation = [
-  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('identifier').optional().trim().notEmpty().withMessage('ID number is required'),
+  body('email').optional().trim().notEmpty().withMessage('ID number is required'),
   body('password').notEmpty().withMessage('Password is required')
 ];
+
+const updateUserPresence = async (userId, { isOnline, updateLastActivity = false }) => {
+  const updateFields = ['is_online = ?'];
+  const updateValues = [isOnline ? 1 : 0];
+
+  if (updateLastActivity) {
+    updateFields.push('last_activity_at = NOW()');
+  }
+
+  updateValues.push(userId);
+
+  await db.query(
+    `UPDATE users SET ${updateFields.join(', ')} WHERE user_id = ?`,
+    updateValues
+  );
+};
+
+const normalizeIdentifier = (value) =>
+  String(value || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9]/g, '');
 
 // Register new user
 router.post('/register', registerValidation, async (req, res) => {
@@ -75,7 +100,32 @@ router.post('/register', registerValidation, async (req, res) => {
       });
     }
 
-    const { email, password, firstName, lastName } = req.body;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      externalId,
+      externalSource,
+      externalType
+    } = req.body;
+
+    const normalizedExternalId = externalId ? String(externalId).trim() : null;
+    const normalizedExternalSource = externalSource ? String(externalSource).trim() : null;
+    const normalizedExternalType = externalType ? String(externalType).trim().toLowerCase() : null;
+    const hasAnyExternalIdentity = Boolean(
+      normalizedExternalId || normalizedExternalSource || normalizedExternalType
+    );
+
+    if (
+      hasAnyExternalIdentity &&
+      (!normalizedExternalId || !normalizedExternalSource || !normalizedExternalType)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'External identity requires externalId, externalSource, and externalType'
+      });
+    }
 
     // Check if user already exists
     const existingUser = await db.query(
@@ -90,14 +140,56 @@ router.post('/register', registerValidation, async (req, res) => {
       });
     }
 
+    if (hasAnyExternalIdentity) {
+      const existingExternalUser = await db.query(
+        `SELECT user_id
+         FROM users
+         WHERE external_source = ? AND external_type = ?
+           AND external_user_id = ?
+         LIMIT 1`,
+        [
+          normalizedExternalSource,
+          normalizedExternalType,
+          normalizedExternalId
+        ]
+      );
+
+      if (existingExternalUser.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'This school ID is already linked to an existing account'
+        });
+      }
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user with Subscriber type (type_id = 1)
     const result = await db.query(`
-      INSERT INTO users (email, password, first_name, last_name, user_type_id, tokens)
-      VALUES (?, ?, ?, ?, 1, 0)
-    `, [email, hashedPassword, firstName, lastName]);
+      INSERT INTO users (
+        email,
+        password,
+        first_name,
+        last_name,
+        user_type_id,
+        tokens,
+        external_user_id,
+        external_source,
+        external_type,
+        external_last_synced_at
+      )
+      VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?, ?)
+    `, [
+      email,
+      hashedPassword,
+      firstName,
+      lastName,
+      normalizedExternalId,
+      normalizedExternalSource,
+      normalizedExternalType,
+      hasAnyExternalIdentity ? new Date() : null
+    ]);
 
     const userId = result.insertId;
 
@@ -124,6 +216,9 @@ router.post('/register', registerValidation, async (req, res) => {
           email,
           firstName,
           lastName,
+          externalId: normalizedExternalId,
+          externalSource: normalizedExternalSource,
+          externalType: normalizedExternalType,
           isVerified: false
         },
         token
@@ -160,12 +255,22 @@ router.post('/login', loginValidation, async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
+    const rawIdentifier = String(req.body.identifier || req.body.email || '').trim();
+    const identifier = normalizeIdentifier(rawIdentifier);
+    const { password } = req.body;
+
+    if (!identifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID number is required'
+      });
+    }
 
     // Find user with type information
     // Check if user has accepted terms by checking if they have a TERMS_ACCEPTED log entry
     const users = await db.query(`
-      SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture, 
+      SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture,
+             u.external_user_id,
              t.account_type_name,
              CASE 
                WHEN EXISTS (
@@ -177,13 +282,20 @@ router.post('/login', loginValidation, async (req, res) => {
              END as terms_accepted
       FROM users u
       LEFT JOIN types t ON u.user_type_id = t.type_id
-      WHERE u.email = ?
-    `, [email]);
+      WHERE REPLACE(REPLACE(COALESCE(u.external_user_id, ''), '-', ''), ' ', '') = ?
+         OR LOWER(u.email) = LOWER(?)
+    `, [identifier, rawIdentifier]);
 
     if (users.length === 0) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Auth login] no user found for identifier:', {
+          rawIdentifier,
+          normalizedIdentifier: identifier
+        });
+      }
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid ID number or password'
       });
     }
 
@@ -192,9 +304,16 @@ router.post('/login', loginValidation, async (req, res) => {
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Auth login] password mismatch:', {
+          userId: user.user_id,
+          rawIdentifier,
+          normalizedIdentifier: identifier
+        });
+      }
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid ID number or password'
       });
     }
 
@@ -221,6 +340,7 @@ router.post('/login', loginValidation, async (req, res) => {
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
+      external_user_id: user.external_user_id,
       tokens: user.tokens,
       type_id: user.user_type_id,
       account_type_name: user.account_type_name,
@@ -234,6 +354,11 @@ router.post('/login', loginValidation, async (req, res) => {
       ActionTypes.LOGIN,
       `User logged in: ${user.email} (${user.account_type_name})`
     );
+
+    await updateUserPresence(user.user_id, {
+      isOnline: true,
+      updateLastActivity: false
+    });
 
     res.json({
       success: true,
@@ -278,7 +403,8 @@ router.post('/login', loginValidation, async (req, res) => {
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const users = await db.query(`
-      SELECT u.user_id, u.email, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture, 
+      SELECT u.user_id, u.email, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture,
+             u.external_user_id,
              t.account_type_name, u.created_at,
              CASE 
                WHEN EXISTS (
@@ -315,6 +441,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
+      external_user_id: user.external_user_id,
       tokens: user.tokens,
       type_id: user.user_type_id,
       account_type_name: user.account_type_name,
@@ -639,8 +766,11 @@ router.put('/change-password', authenticateToken, [
 // Logout (invalidate token)
 router.post('/logout', authenticateToken, async (req, res) => {
   try {
-    // In a more sophisticated system, you would maintain a blacklist of tokens
-    // For now, we'll just return success
+    await updateUserPresence(req.user.user_id, {
+      isOnline: false,
+      updateLastActivity: true
+    });
+
     res.json({
       success: true,
       message: 'Logged out successfully'

@@ -209,6 +209,25 @@ export const loginStyles = StyleSheet.create({
     marginBottom: getResponsiveMargin(8),
     fontWeight: '500',
   },
+  rememberMeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: getResponsiveMargin(4),
+  },
+  rememberMeCheckbox: {
+    width: getResponsiveSize(20),
+    height: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(6),
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: getResponsiveMargin(10),
+  },
+  rememberMeText: {
+    fontSize: getResponsiveFontSize(14),
+    fontWeight: '500',
+  },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',

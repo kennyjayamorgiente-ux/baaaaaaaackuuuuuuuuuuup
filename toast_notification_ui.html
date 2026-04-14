@@ -1,0 +1,118 @@
+
+<style>
+  .toast-demo { padding: 1.5rem 0; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 2rem; }
+  .toast-container { position: relative; min-height: 80px; }
+  .toast { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: var(--border-radius-lg); border: 0.5px solid; max-width: 360px; margin-bottom: 10px; transform: translateY(0); opacity: 1; transition: all 0.3s ease; }
+  .toast.hiding { transform: translateY(-8px); opacity: 0; }
+  .toast-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .toast-icon svg { width: 11px; height: 11px; }
+  .toast-body { flex: 1; }
+  .toast-title { font-size: 14px; font-weight: 500; margin: 0 0 2px; }
+  .toast-msg { font-size: 13px; margin: 0; }
+  .toast-close { cursor: pointer; background: none; border: none; padding: 0; line-height: 1; color: inherit; opacity: 0.5; font-size: 16px; margin-top: -1px; }
+  .toast-close:hover { opacity: 1; }
+
+  .toast.success { background: var(--color-background-success); border-color: var(--color-border-success); }
+  .toast.success .toast-icon { background: var(--color-text-success); }
+  .toast.success .toast-title { color: var(--color-text-success); }
+  .toast.success .toast-msg { color: var(--color-text-success); opacity: 0.8; }
+  .toast.success .toast-close { color: var(--color-text-success); }
+
+  .toast.error { background: var(--color-background-danger); border-color: var(--color-border-danger); }
+  .toast.error .toast-icon { background: var(--color-text-danger); }
+  .toast.error .toast-title { color: var(--color-text-danger); }
+  .toast.error .toast-msg { color: var(--color-text-danger); opacity: 0.8; }
+  .toast.error .toast-close { color: var(--color-text-danger); }
+
+  .toast.info { background: var(--color-background-info); border-color: var(--color-border-info); }
+  .toast.info .toast-icon { background: var(--color-text-info); }
+  .toast.info .toast-title { color: var(--color-text-info); }
+  .toast.info .toast-msg { color: var(--color-text-info); opacity: 0.8; }
+  .toast.info .toast-close { color: var(--color-text-info); }
+
+  .toast.warning { background: var(--color-background-warning); border-color: var(--color-border-warning); }
+  .toast.warning .toast-icon { background: var(--color-text-warning); }
+  .toast.warning .toast-title { color: var(--color-text-warning); }
+  .toast.warning .toast-msg { color: var(--color-text-warning); opacity: 0.8; }
+  .toast.warning .toast-close { color: var(--color-text-warning); }
+
+  .label { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 10px; }
+  .progress { height: 3px; border-radius: 2px; margin-top: 8px; animation: shrink 3s linear forwards; }
+  .toast.success .progress { background: var(--color-text-success); }
+  .toast.error .progress { background: var(--color-text-danger); }
+  .toast.info .progress { background: var(--color-text-info); }
+  .toast.warning .progress { background: var(--color-text-warning); }
+  @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+</style>
+
+<div class="toast-demo">
+  <h2 class="sr-only">Toast notification UI demo</h2>
+  <p class="label">Click a button to preview each toast type</p>
+  <div class="controls">
+    <button onclick="showToast('success','Login successful','Welcome back, John!')">Success</button>
+    <button onclick="showToast('error','Invalid credentials','Student ID or password is incorrect.')">Error</button>
+    <button onclick="showToast('info','Session expiring','Your session will expire in 5 minutes.')">Info</button>
+    <button onclick="showToast('warning','Account inactive','Please contact admin to reactivate.')">Warning</button>
+  </div>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <p class="label" style="margin-top: 1.5rem;">All types at once</p>
+  <div>
+    <div class="toast success" style="max-width:360px; margin-bottom:10px;">
+      <div class="toast-icon"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="toast-body"><p class="toast-title">Account created</p><p class="toast-msg">Your TapPark account is ready.</p></div>
+    </div>
+    <div class="toast error" style="max-width:360px; margin-bottom:10px;">
+      <div class="toast-icon"><svg viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="toast-body"><p class="toast-title">Student not found</p><p class="toast-msg">No record found for this Student ID.</p></div>
+    </div>
+    <div class="toast info" style="max-width:360px; margin-bottom:10px;">
+      <div class="toast-icon"><svg viewBox="0 0 12 12" fill="none"><path d="M6 5v4M6 3.5v.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="toast-body"><p class="toast-title">Token refreshed</p><p class="toast-msg">Your session has been extended.</p></div>
+    </div>
+    <div class="toast warning" style="max-width:360px;">
+      <div class="toast-icon"><svg viewBox="0 0 12 12" fill="none"><path d="M6 4v3M6 8.5v.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="toast-body"><p class="toast-title">Account suspended</p><p class="toast-msg">Please contact the admin office.</p></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showToast(type, title, msg) {
+  const container = document.getElementById('toastContainer');
+  const icons = {
+    success: '<path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    error: '<path d="M3 3l6 6M9 3l-6 6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>',
+    info: '<path d="M6 5v4M6 3.5v.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>',
+    warning: '<path d="M6 4v3M6 8.5v.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>'
+  };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(8px)';
+  el.innerHTML = `
+    <div class="toast-icon"><svg viewBox="0 0 12 12" fill="none">${icons[type]}</svg></div>
+    <div class="toast-body">
+      <p class="toast-title">${title}</p>
+      <p class="toast-msg">${msg}</p>
+      <div class="progress"></div>
+    </div>
+    <button class="toast-close" onclick="dismissToast(this.parentElement)">×</button>
+  `;
+  container.appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.transition = 'all 0.3s ease';
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+  });
+  setTimeout(() => dismissToast(el), 3000);
+}
+
+function dismissToast(el) {
+  if (!el || !el.parentElement) return;
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(-8px)';
+  setTimeout(() => el.remove(), 300);
+}
+</script>

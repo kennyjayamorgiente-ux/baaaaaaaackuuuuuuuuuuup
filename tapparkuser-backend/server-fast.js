@@ -13,6 +13,7 @@ const GracePeriodChecker = require('./grace_period_checker');
 
 const db = require('./config/database');
 const authRoutes = require('./routes/auth');
+const tapparkRoutes = require('./routes/tappark');
 const userRoutes = require('./routes/users');
 const vehicleRoutes = require('./routes/vehicles');
 const parkingRoutes = require('./routes/parking');
@@ -335,6 +336,7 @@ app.get('/health', (req, res) => {
 });
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/tappark', tapparkRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/parking', parkingRoutes);
@@ -639,5 +641,4 @@ console.log(`⏰ Simple grace period checker scheduled every ${GRACE_CHECK_INTER
 if (!isProduction) {
   console.log('⏰ Interval ID:', gracePeriodInterval);
 }
-
 

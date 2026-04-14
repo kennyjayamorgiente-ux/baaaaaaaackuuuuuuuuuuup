@@ -661,7 +661,7 @@ const BalanceScreen: React.FC = () => {
             {/* Student ID Section */}
             <View style={balanceScreenStyles.studentIdSection}>
               <View style={balanceScreenStyles.studentIdInfo}>
-                <Text style={balanceScreenStyles.studentIdLabel}>STUDENT ID</Text>
+                <Text style={balanceScreenStyles.studentIdLabel}>ID NUMBER</Text>
                 <Text style={balanceScreenStyles.studentIdText}>
                   {userProfile?.external_user_id || 'N/A'}
                 </Text>

@@ -6,6 +6,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { LoadingProvider } from '../contexts/LoadingContext';
 import { ExpirationModalProvider } from '../contexts/ExpirationModalContext';
 import { ThemeProvider, useThemeColors } from '../contexts/ThemeContext';
+import { ToastProvider } from '../contexts/ToastContext';
 import CustomDrawer from '../components/CustomDrawer';
 import GlobalSpinner from '../components/GlobalSpinner';
 import ExpirationModal from '../components/ExpirationModal';
@@ -69,15 +70,17 @@ export default function RootLayout() {
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
 			<ThemeProvider>
-				<AuthProvider>
-					<LoadingProvider>
-						<ExpirationModalProvider>
-							<DrawerProvider>
-								<ThemedRootLayout />
-							</DrawerProvider>
-						</ExpirationModalProvider>
-					</LoadingProvider>
-				</AuthProvider>
+				<ToastProvider>
+					<AuthProvider>
+						<LoadingProvider>
+							<ExpirationModalProvider>
+								<DrawerProvider>
+									<ThemedRootLayout />
+								</DrawerProvider>
+							</ExpirationModalProvider>
+						</LoadingProvider>
+					</AuthProvider>
+				</ToastProvider>
 			</ThemeProvider>
 		</GestureHandlerRootView>
 	);
