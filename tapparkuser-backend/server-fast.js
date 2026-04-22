@@ -526,7 +526,7 @@ const runGracePeriodCheck = async () => {
 
           if (reservation.parking_spots_id !== 0) {
             await connection.execute(
-              'UPDATE parking_spot SET status = ?, is_occupied = 0 WHERE parking_spot_id = ?',
+              'UPDATE parking_spot SET status = ?, is_occupied = 0, occupied_by = NULL, occupied_at = NULL WHERE parking_spot_id = ?',
               ['available', reservation.parking_spots_id]
             );
           }
@@ -641,4 +641,3 @@ console.log(`⏰ Simple grace period checker scheduled every ${GRACE_CHECK_INTER
 if (!isProduction) {
   console.log('⏰ Interval ID:', gracePeriodInterval);
 }
-

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { getActiveSubscriptionTokenBalance } = require('../utils/subscriptionTokens');
 const isProduction = process.env.NODE_ENV === 'production';
 
 const getNormalizedRole = (user) => {
@@ -17,6 +18,11 @@ const isAdminUser = (user) => {
 const isAttendantUser = (user) => {
   const { accountType, role, userTypeId } = getNormalizedRole(user);
   return accountType === 'attendant' || role === 'attendant' || userTypeId === 2;
+};
+
+const isSubscriberUser = (user) => {
+  const { accountType, role, userTypeId } = getNormalizedRole(user);
+  return accountType === 'subscriber' || role === 'subscriber' || userTypeId === 1;
 };
 
 const verifyJwtToken = (token) => {
@@ -253,26 +259,28 @@ const checkBalance = (requiredAmount = 0) => {
         });
       }
 
-      const user = await db.query(
-        'SELECT tokens FROM users WHERE user_id = ?',
-        [req.user.user_id]
-      );
-
-      if (!user.length) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
+      let availableBalance = 0;
+      if (isSubscriberUser(req.user)) {
+        availableBalance = await getActiveSubscriptionTokenBalance(req.user.user_id);
+      } else {
+        const userRows = await db.query('SELECT tokens FROM users WHERE user_id = ?', [req.user.user_id]);
+        if (!userRows.length) {
+          return res.status(404).json({
+            success: false,
+            message: 'User not found'
+          });
+        }
+        availableBalance = Number(userRows[0].tokens || 0);
       }
 
-      if (user[0].tokens < requiredAmount) {
+      if (availableBalance < requiredAmount) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient balance. Required: $${requiredAmount}, Available: $${user[0].tokens}`
+          message: `Insufficient balance. Required: $${requiredAmount}, Available: $${availableBalance}`
         });
       }
 
-      req.userBalance = user[0].tokens;
+      req.userBalance = availableBalance;
       next();
     } catch (error) {
       console.error('Balance check error:', error);

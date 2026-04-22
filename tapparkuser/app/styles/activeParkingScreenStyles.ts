@@ -419,9 +419,12 @@ export const getActiveParkingScreenStyles = (colors: ThemeColors) => StyleSheet.
     zIndex: 10, // Ensure content stays above progress fill
   },
   timerText: {
-    fontSize: getResponsiveFontSize(36),
+    fontSize: isSmallScreen ? getResponsiveFontSize(26) : getResponsiveFontSize(36),
+    lineHeight: isSmallScreen ? getResponsiveSize(30) : getResponsiveSize(42),
     fontWeight: 'bold',
     marginBottom: getResponsiveMargin(8),
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   timerLabels: {
     flexDirection: 'row',

@@ -8,6 +8,7 @@ const fs = require('fs');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { logUserActivity, ActionTypes } = require('../utils/userLogger');
+const { resolveEffectiveUserTokens } = require('../utils/subscriptionTokens');
 
 const router = express.Router();
 
@@ -334,6 +335,8 @@ router.post('/login', loginValidation, async (req, res) => {
       const protocol = req.protocol;
       profileImageUrl = `${protocol}://${host}/uploads/profile-pictures/${user.profile_picture}`;
     }
+
+    const effectiveTokens = await resolveEffectiveUserTokens(user);
     
     const userResponse = {
       user_id: user.user_id,
@@ -341,7 +344,7 @@ router.post('/login', loginValidation, async (req, res) => {
       first_name: user.first_name,
       last_name: user.last_name,
       external_user_id: user.external_user_id,
-      tokens: user.tokens,
+      tokens: effectiveTokens,
       type_id: user.user_type_id,
       account_type_name: user.account_type_name,
       profile_image: profileImageUrl,
@@ -436,13 +439,15 @@ router.get('/profile', authenticateToken, async (req, res) => {
       profileImageUrl = `${protocol}://${host}/uploads/profile-pictures/${user.profile_picture}`;
     }
 
+    const effectiveTokens = await resolveEffectiveUserTokens(user);
+
     const userResponse = {
       user_id: user.user_id,
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
       external_user_id: user.external_user_id,
-      tokens: user.tokens,
+      tokens: effectiveTokens,
       type_id: user.user_type_id,
       account_type_name: user.account_type_name,
       profile_image: profileImageUrl,

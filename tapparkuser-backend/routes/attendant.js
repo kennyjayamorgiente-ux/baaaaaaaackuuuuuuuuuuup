@@ -9,6 +9,7 @@ const {
   validateBodyString
 } = require('../middleware/validation');
 const { logUserActivity, ActionTypes } = require('../utils/userLogger');
+const { syncUserTokensFromSubscriptions } = require('../utils/subscriptionTokens');
 const bcrypt = require('bcryptjs');
 const QRCode = require('qrcode');
 const {
@@ -710,9 +711,12 @@ router.post('/start-parking-session', authenticateToken, async (req, res) => {
       // Update parking spot status from 'reserved' to 'occupied'
       await db.query(`
         UPDATE parking_spot 
-        SET status = 'occupied'
+        SET status = 'occupied',
+            is_occupied = 1,
+            occupied_by = ?,
+            occupied_at = NOW()
         WHERE parking_spot_id = ? AND status = 'reserved'
-      `, [reservationData.parking_spots_id]);
+      `, [reservationData.user_id, reservationData.parking_spots_id]);
     }
 
     // Get the actual start_time from database to ensure accuracy
@@ -1164,7 +1168,10 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
       ] : [{
         sql: `
           UPDATE parking_spot 
-          SET status = 'available'
+          SET status = 'available',
+              is_occupied = 0,
+              occupied_by = NULL,
+              occupied_at = NULL
           WHERE parking_spot_id = ?
         `,
         params: [reservationData.parking_spots_id]
@@ -1217,6 +1224,7 @@ router.post('/end-parking-session', authenticateToken, async (req, res) => {
 
     // Use transaction to ensure all updates happen atomically
     await db.transaction(transactionQueries);
+    await syncUserTokensFromSubscriptions(reservationData.user_id);
 
     // Verify the deduction by getting updated balance (include all active subscriptions, even if hours_remaining is 0)
     const updatedSubscriptionHours = await db.query(`
@@ -1691,8 +1699,13 @@ router.post(
 
       // Update spot status to occupied (since attendant booking starts immediately)
       await connection.execute(
-        'UPDATE parking_spot SET status = ? WHERE parking_spot_id = ? AND status = ?',
-        ['occupied', spotId, 'available']
+        `UPDATE parking_spot
+         SET status = ?,
+             is_occupied = 1,
+             occupied_by = ?,
+             occupied_at = NOW()
+         WHERE parking_spot_id = ? AND status = ?`,
+        ['occupied', guestUserId, spotId, 'available']
       );
 
       // Create reservation with active status and start_time (since attendant booking starts immediately)
@@ -1951,7 +1964,10 @@ router.put('/end-parking-session/:reservationId', authenticateToken, validatePar
       // Update spot status to available
       await connection.execute(
         `UPDATE parking_spot 
-         SET status = 'available'
+         SET status = 'available',
+             is_occupied = 0,
+             occupied_by = NULL,
+             occupied_at = NULL
          WHERE parking_spot_id = ?`,
         [reservation.parking_spots_id]
       );
@@ -2120,7 +2136,10 @@ router.put('/cancel-booking/:reservationId', authenticateToken, validateParamInt
       // Update spot status to available
       await connection.execute(
         `UPDATE parking_spot 
-         SET status = 'available'
+         SET status = 'available',
+             is_occupied = 0,
+             occupied_by = NULL,
+             occupied_at = NULL
          WHERE parking_spot_id = ?`,
         [reservation.parking_spots_id]
       );

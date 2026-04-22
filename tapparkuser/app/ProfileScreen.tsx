@@ -69,6 +69,7 @@ const ProfileScreen: React.FC = () => {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
   const ratingStarColor = isDarkMode ? '#D80000' : '#8A0000';
+  const textScaleProps = { maxFontSizeMultiplier: 1.15 };
 
   useEffect(() => {
     setProfileImageFailed(false);
@@ -460,19 +461,33 @@ const ProfileScreen: React.FC = () => {
             {isLoading ? (
               <View style={profileScreenStyles.loadingContainer}>
                 <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={profileScreenStyles.loadingText}>Loading profile...</Text>
+                <Text style={profileScreenStyles.loadingText} {...textScaleProps}>Loading profile...</Text>
               </View>
             ) : userProfile ? (
               <>
-                <Text style={profileScreenStyles.userName}>
+                <Text
+                  style={profileScreenStyles.userName}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                  {...textScaleProps}
+                >
                   {userProfile.first_name} {userProfile.last_name}
                 </Text>
-                <Text style={profileScreenStyles.userEmail}>{userProfile.email}</Text>
+                <Text
+                  style={profileScreenStyles.userEmail}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                  {...textScaleProps}
+                >
+                  {userProfile.email}
+                </Text>
               </>
             ) : (
               <>
-                <Text style={profileScreenStyles.userName}>User</Text>
-                <Text style={profileScreenStyles.userEmail}>No profile data</Text>
+                <Text style={profileScreenStyles.userName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} {...textScaleProps}>User</Text>
+                <Text style={profileScreenStyles.userEmail} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} {...textScaleProps}>No profile data</Text>
               </>
             )}
           </View>
@@ -490,7 +505,15 @@ const ProfileScreen: React.FC = () => {
                   width={screenDimensions.isTablet ? 28 : 24}
                   height={screenDimensions.isTablet ? 28 : 24}
                 />
-                <Text style={profileScreenStyles.menuItemText}>{item.title}</Text>
+                <Text
+                  style={profileScreenStyles.menuItemText}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  {...textScaleProps}
+                >
+                  {item.title}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -505,7 +528,14 @@ const ProfileScreen: React.FC = () => {
             <Text style={[
               profileScreenStyles.helpButtonText,
               isDarkMode && { color: '#FFFFFF' }
-            ]}>Rate us</Text>
+            ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+              {...textScaleProps}
+            >
+              Rate us
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -661,4 +691,3 @@ const ProfileScreen: React.FC = () => {
 // Styles are now imported from profileScreenStyles.ts
 
 export default ProfileScreen;
-

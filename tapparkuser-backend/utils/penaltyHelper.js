@@ -71,10 +71,25 @@ const settlePenaltyWithHours = async (userId, hoursCredited = 0, subscriptionId 
 
     if (applied > 0 && subscriptionId) {
       await connection.execute(
-        'UPDATE subscriptions SET hours_remaining = GREATEST(0, hours_remaining - ?) WHERE subscription_id = ?',
-        [applied, subscriptionId]
+        `UPDATE subscriptions
+         SET tokens_remaining = GREATEST(0, tokens_remaining - ?),
+             tokens_used = tokens_used + ?
+         WHERE subscription_id = ?`,
+        [applied, applied, subscriptionId]
       );
     }
+
+    const [balanceRows] = await connection.query(
+      `SELECT COALESCE(SUM(tokens_remaining), 0) AS total_tokens_remaining
+       FROM subscriptions
+       WHERE user_id = ? AND status = 'active'`,
+      [userId]
+    );
+    const totalTokensRemaining = parseFloat(balanceRows[0]?.total_tokens_remaining || 0);
+    await connection.execute(
+      'UPDATE users SET tokens = ? WHERE user_id = ?',
+      [totalTokensRemaining, userId]
+    );
 
     const [remainingRows] = await connection.query(
       'SELECT COALESCE(SUM(penalty_time), 0) AS total_penalty_hours FROM penalty WHERE user_id = ?',

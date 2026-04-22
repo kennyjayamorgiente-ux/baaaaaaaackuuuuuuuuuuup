@@ -58,6 +58,11 @@ const getResponsiveFontSize = (size: number): number => {
   return applyHeightScale(scaledSize);
 };
 
+const getClampedFontSize = (size: number, min: number, max: number): number => {
+  const responsiveSize = getResponsiveFontSize(size);
+  return Math.min(max, Math.max(min, responsiveSize));
+};
+
 const getResponsiveSize = (size: number): number => {
   let scaledSize = size;
   if (isSmallScreen) scaledSize *= 0.8;
@@ -189,14 +194,20 @@ export const getProfileScreenStyles = (colors: ThemeColors) => StyleSheet.create
     borderColor: 'white',
   },
   userName: {
-    fontSize: getResponsiveFontSize(28),
+    fontSize: getClampedFontSize(24, 18, 26),
+    lineHeight: getResponsiveSize(30),
     fontWeight: 'bold',
     color: colors.primary,
     marginBottom: getResponsivePadding(8),
+    textAlign: 'center',
+    width: '100%',
   },
   userEmail: {
-    fontSize: getResponsiveFontSize(18),
+    fontSize: getClampedFontSize(16, 13, 18),
+    lineHeight: getResponsiveSize(22),
     color: colors.textSecondary,
+    textAlign: 'center',
+    width: '100%',
   },
   menuContainer: {
     marginBottom: getResponsivePadding(25),
@@ -213,10 +224,12 @@ export const getProfileScreenStyles = (colors: ThemeColors) => StyleSheet.create
     marginBottom: getResponsiveMargin(8),
   },
   menuItemText: {
-    fontSize: getResponsiveFontSize(18),
+    fontSize: getClampedFontSize(16, 13, 17),
     color: colors.primary,
     marginLeft: getResponsivePadding(15),
     fontWeight: '500',
+    flex: 1,
+    minWidth: 0,
   },
   helpButton: {
     backgroundColor: colors.primary,
@@ -237,9 +250,11 @@ export const getProfileScreenStyles = (colors: ThemeColors) => StyleSheet.create
   },
   helpButtonText: {
     color: colors.textInverse,
-    fontSize: getResponsiveFontSize(18),
+    fontSize: getClampedFontSize(16, 13, 17),
     fontWeight: '600',
     marginLeft: getResponsivePadding(10),
+    flexShrink: 1,
+    minWidth: 0,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -476,7 +491,6 @@ export const profileScreenStyles = getProfileScreenStyles({
   gray800: '#374151',
   gray900: '#1F2937',
 } as ThemeColors);
-
 
 
 

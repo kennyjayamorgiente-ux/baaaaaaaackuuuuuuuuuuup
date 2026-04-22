@@ -49,6 +49,11 @@ const getResponsiveFontSize = (baseSize: number): number => {
   return baseSize;
 };
 
+const getClampedFontSize = (size: number, min: number, max: number): number => {
+  const responsiveSize = getResponsiveFontSize(size);
+  return Math.min(max, Math.max(min, responsiveSize));
+};
+
 const getResponsiveSize = (baseSize: number): number => {
   if (isSmallScreen) return baseSize * 0.8;
   if (isMediumScreen) return baseSize * 0.9;
@@ -162,16 +167,20 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     marginTop: getResponsiveSize(5),
   },
   userName: {
-    fontSize: getResponsiveFontSize(28),
+    fontSize: getClampedFontSize(24, 18, 26),
+    lineHeight: getResponsiveSize(30),
     fontWeight: 'bold',
     color: colors.primary,
     marginBottom: getResponsivePadding(8),
     textAlign: 'center',
+    width: '100%',
   },
   userEmail: {
-    fontSize: getResponsiveFontSize(18),
+    fontSize: getClampedFontSize(16, 13, 18),
+    lineHeight: getResponsiveSize(22),
     color: colors.textSecondary,
     textAlign: 'center',
+    width: '100%',
   },
   debitCardContainer: {
     backgroundColor: colors.backgroundSecondary,
@@ -190,10 +199,11 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     marginBottom: getResponsivePadding(20),
   },
   ownerNameText: {
-    fontSize: getResponsiveFontSize(20),
+    fontSize: getClampedFontSize(18, 14, 20),
     fontWeight: 'bold',
     color: colors.primary,
     letterSpacing: 1,
+    flexShrink: 1,
   },
   studentIdSection: {
     flexDirection: 'row',
@@ -212,15 +222,15 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     pointerEvents: 'none',
   },
   studentIdLabel: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getClampedFontSize(14, 12, 16),
     color: colors.textSecondary,
     marginBottom: getResponsivePadding(15),
   },
   studentIdText: {
-    fontSize: getResponsiveFontSize(24),
+    fontSize: getClampedFontSize(20, 14, 22),
     fontWeight: 'bold',
     color: colors.primary,
-    letterSpacing: 2,
+    letterSpacing: isSmallScreen ? 1 : 2,
     flexShrink: 1,
     minWidth: 0,
   },
@@ -229,7 +239,7 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: getResponsivePadding(12),
-    flexWrap: 'nowrap',
+    flexWrap: isSmallScreen ? 'wrap' : 'nowrap',
   },
   balanceInfo: {
     flexDirection: 'row',
@@ -239,7 +249,7 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     minWidth: 0,
   },
   balanceText: {
-    fontSize: getResponsiveFontSize(22),
+    fontSize: getClampedFontSize(20, 14, 22),
     fontWeight: 'bold',
     color: colors.primary,
     marginLeft: getResponsivePadding(10),
@@ -258,11 +268,14 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     // Allow button to shrink on small screens if needed
     flexShrink: 0,
     alignSelf: 'auto',
+    marginTop: isSmallScreen ? getResponsiveMargin(8) : 0,
+    width: isSmallScreen ? '100%' : undefined,
   },
   topUpText: {
     color: 'white',
-    fontSize: getResponsiveFontSize(16),
+    fontSize: getClampedFontSize(14, 12, 16),
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   transactionsSection: {
     marginTop: getResponsivePadding(10),
@@ -318,6 +331,68 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
   },
   viewToggleTextActive: {
     color: colors.textInverse,
+  },
+  signDropdownAnchor: {
+    position: 'relative',
+    zIndex: 25,
+  },
+  signDropdownTrigger: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsivePadding(6),
+    paddingVertical: getResponsivePadding(8),
+    paddingHorizontal: getResponsivePadding(12),
+    borderRadius: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
+    minHeight: getResponsiveSize(40),
+  },
+  signDropdownTriggerText: {
+    color: colors.primary,
+    fontSize: getResponsiveFontSize(13),
+    fontWeight: '600',
+  },
+  signDropdownMenu: {
+    position: 'absolute',
+    top: getResponsiveSize(44),
+    right: 0,
+    minWidth: getResponsiveSize(170),
+    borderRadius: getResponsiveSize(12),
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 35,
+  },
+  signDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: getResponsivePadding(10),
+    paddingHorizontal: getResponsivePadding(12),
+  },
+  signDropdownItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsivePadding(8),
+  },
+  signDropdownItemActive: {
+    backgroundColor: colors.gray100,
+  },
+  signDropdownItemText: {
+    color: colors.text,
+    fontSize: getResponsiveFontSize(14),
+  },
+  signDropdownItemTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
   },
   filterRow: {
     marginBottom: getResponsivePadding(12),

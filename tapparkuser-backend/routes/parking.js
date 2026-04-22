@@ -4,6 +4,7 @@ const db = require('../config/database');
 const { authenticateToken, checkBalance, attendantOrAdmin } = require('../middleware/auth');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
+const { syncUserTokensFromSubscriptions } = require('../utils/subscriptionTokens');
 const {
   emitReservationUpdated,
   emitSpotsUpdated
@@ -74,9 +75,12 @@ router.put('/spots/:spotId/status', authenticateToken, attendantOrAdmin, async (
     // Update the spot status
     const updateResult = await db.execute(`
       UPDATE parking_spot 
-      SET status = ?
+      SET status = ?,
+          is_occupied = CASE WHEN ? = 'occupied' THEN 1 ELSE 0 END,
+          occupied_by = CASE WHEN ? = 'occupied' THEN occupied_by ELSE NULL END,
+          occupied_at = CASE WHEN ? = 'occupied' THEN COALESCE(occupied_at, NOW()) ELSE NULL END
       WHERE parking_spot_id = ?
-    `, [status, spotId]);
+    `, [status, status, status, status, spotId]);
     
     if (updateResult.affectedRows === 0) {
       return res.status(500).json({
@@ -349,11 +353,14 @@ router.post('/start', authenticateToken, startParkingValidation, checkBalance(50
           UPDATE parking_spot ps
           JOIN parking_section psec ON ps.parking_section_id = psec.parking_section_id
           JOIN parking_area pa ON psec.parking_area_id = pa.parking_area_id
-          SET ps.status = 'occupied'
+          SET ps.status = 'occupied',
+              ps.is_occupied = 1,
+              ps.occupied_by = ?,
+              ps.occupied_at = NOW()
           WHERE pa.parking_area_id = ? AND ps.status = 'free'
           LIMIT 1
         `,
-        params: [locationId]
+        params: [req.user.user_id, locationId]
       }
     ]);
 
@@ -511,7 +518,10 @@ router.post('/end/:sessionId', authenticateToken, async (req, res) => {
           UPDATE parking_spot ps
           JOIN parking_section psec ON ps.parking_section_id = psec.parking_section_id
           JOIN parking_area pa ON psec.parking_area_id = pa.parking_area_id
-          SET ps.status = 'free'
+          SET ps.status = 'free',
+              ps.is_occupied = 0,
+              ps.occupied_by = NULL,
+              ps.occupied_at = NULL
           WHERE pa.parking_area_id = ? AND ps.status = 'occupied'
           LIMIT 1
         `,
@@ -539,6 +549,7 @@ router.post('/end/:sessionId', authenticateToken, async (req, res) => {
 
     // Process payment using subscription hours only
     await db.transaction(transactionQueries);
+    await syncUserTokensFromSubscriptions(req.user.user_id);
 
     emitReservationUpdated({
       reservationId: Number(sessionId),

@@ -4,6 +4,7 @@ const { randomUUID } = require('crypto');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { logUserActivity, ActionTypes } = require('../utils/userLogger');
+const { resolveEffectiveUserTokens } = require('../utils/subscriptionTokens');
 
 const router = express.Router();
 
@@ -208,22 +209,24 @@ router.post('/topup', authenticateToken, topUpValidation, async (req, res) => {
 // Get current balance
 router.get('/balance', authenticateToken, async (req, res) => {
   try {
-    const user = await db.query(
-      'SELECT tokens as balance FROM users WHERE user_id = ?',
+    const userRows = await db.query(
+      'SELECT user_id, user_type_id, tokens FROM users WHERE user_id = ?',
       [req.user.user_id]
     );
 
-    if (user.length === 0) {
+    if (userRows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
+    const balance = await resolveEffectiveUserTokens(userRows[0]);
+
     res.json({
       success: true,
       data: {
-        balance: user[0].balance
+        balance
       }
     });
   } catch (error) {

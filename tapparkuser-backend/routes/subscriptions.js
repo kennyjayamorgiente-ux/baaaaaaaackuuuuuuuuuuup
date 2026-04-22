@@ -3,6 +3,7 @@ const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { logUserActivity, ActionTypes } = require('../utils/userLogger');
 const { settlePenaltyWithHours } = require('../utils/penaltyHelper');
+const { syncUserTokensFromSubscriptions } = require('../utils/subscriptionTokens');
 const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
@@ -138,6 +139,7 @@ router.post('/purchase', authenticateToken, [
       FROM subscriptions s
       WHERE s.user_id = ? AND s.status = 'active'
     `, [req.user.user_id]);
+    await syncUserTokensFromSubscriptions(req.user.user_id);
 
     // Log subscription purchase
     if (subscriptionRecord.length > 0) {

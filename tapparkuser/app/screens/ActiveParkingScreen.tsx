@@ -4623,7 +4623,12 @@ const ActiveParkingScreen: React.FC = () => {
                   
                   {/* Timer Content */}
                   <View style={activeParkingScreenStyles.timerContent}>
-                    <Text style={[activeParkingScreenStyles.timerText, { color: isDarkMode ? colors.text : '#000000' }]}>
+                    <Text
+                      style={[activeParkingScreenStyles.timerText, { color: isDarkMode ? colors.text : '#000000' }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
+                    >
                       {parkingEndTime ? 
                         formatTime(Math.floor((parkingEndTime - (parkingStartTime.current || 0)) / 1000)) : 
                         formatTime(elapsedTime)
@@ -5182,6 +5187,5 @@ const ActiveParkingScreen: React.FC = () => {
 };
 
 export default ActiveParkingScreen;
-
 
 

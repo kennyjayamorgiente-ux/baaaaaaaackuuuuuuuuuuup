@@ -119,11 +119,13 @@ const BalanceScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | '7days' | 'month' | 'year' | 'lastyear' | 'custom'>('all');
   const [isFilterDropdownVisible, setIsFilterDropdownVisible] = useState(false);
+  const [isSignDropdownVisible, setIsSignDropdownVisible] = useState(false);
   const [isCustomFilterModalVisible, setIsCustomFilterModalVisible] = useState(false);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const contentScrollRef = useRef<ScrollView>(null);
+  const textScaleProps = { maxFontSizeMultiplier: 1.15 };
 
   // Profile picture component
   const ProfilePicture = ({ size = 120 }: { size?: number }) => {
@@ -431,6 +433,17 @@ const BalanceScreen: React.FC = () => {
     }
   };
 
+  const getSignFilterLabel = () => {
+    switch (signFilter) {
+      case 'credit':
+        return '+ Tokens';
+      case 'debit':
+        return '- Tokens';
+      default:
+        return 'All';
+    }
+  };
+
   const filteredTransactions = React.useMemo(() => {
     const now = new Date();
     const lowerQuery = searchQuery.trim().toLowerCase();
@@ -611,19 +624,33 @@ const BalanceScreen: React.FC = () => {
               {isLoading ? (
                 <View style={balanceScreenStyles.loadingContainer}>
                   <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={balanceScreenStyles.loadingText}>Loading...</Text>
+                  <Text style={balanceScreenStyles.loadingText} {...textScaleProps}>Loading...</Text>
                 </View>
               ) : userProfile ? (
                 <>
-                  <Text style={balanceScreenStyles.userName}>
+                  <Text
+                    style={balanceScreenStyles.userName}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    {...textScaleProps}
+                  >
                     {userProfile.first_name?.toUpperCase()} {userProfile.last_name?.toUpperCase()}
                   </Text>
-                  <Text style={balanceScreenStyles.userEmail}>{userProfile.email}</Text>
+                  <Text
+                    style={balanceScreenStyles.userEmail}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    {...textScaleProps}
+                  >
+                    {userProfile.email}
+                  </Text>
                 </>
               ) : (
                 <>
-                  <Text style={balanceScreenStyles.userName}>USER</Text>
-                  <Text style={balanceScreenStyles.userEmail}>No profile data</Text>
+                  <Text style={balanceScreenStyles.userName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} {...textScaleProps}>USER</Text>
+                  <Text style={balanceScreenStyles.userEmail} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} {...textScaleProps}>No profile data</Text>
                 </>
               )}
             </View>
@@ -653,7 +680,13 @@ const BalanceScreen: React.FC = () => {
 
             {/* Owner Name */}
             <View style={balanceScreenStyles.ownerNameSection}>
-              <Text style={balanceScreenStyles.ownerNameText}>
+              <Text
+                style={balanceScreenStyles.ownerNameText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                {...textScaleProps}
+              >
                 {userProfile ? `${userProfile.first_name?.toUpperCase()} ${userProfile.last_name?.toUpperCase()}` : 'USER'}
               </Text>
             </View>
@@ -661,8 +694,14 @@ const BalanceScreen: React.FC = () => {
             {/* Student ID Section */}
             <View style={balanceScreenStyles.studentIdSection}>
               <View style={balanceScreenStyles.studentIdInfo}>
-                <Text style={balanceScreenStyles.studentIdLabel}>ID NUMBER</Text>
-                <Text style={balanceScreenStyles.studentIdText}>
+                <Text style={balanceScreenStyles.studentIdLabel} {...textScaleProps}>ID NUMBER</Text>
+                <Text
+                  style={balanceScreenStyles.studentIdText}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                  {...textScaleProps}
+                >
                   {userProfile?.external_user_id || 'N/A'}
                 </Text>
               </View>
@@ -681,6 +720,7 @@ const BalanceScreen: React.FC = () => {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.75}
+                  {...textScaleProps}
                 >
                   {subscriptionBalance ? `${formatHoursToHHMM(subscriptionBalance.total_tokens_remaining || 0)} Tokens` : '0.00 Tokens'}
                 </Text>
@@ -689,7 +729,15 @@ const BalanceScreen: React.FC = () => {
                 style={balanceScreenStyles.topUpButton}
                 onPress={() => router.push('/screens/TopUpScreen')}
               >
-                <Text style={balanceScreenStyles.topUpText}>+ ADD TOKENS</Text>
+                <Text
+                  style={balanceScreenStyles.topUpText}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  {...textScaleProps}
+                >
+                  + ADD TOKENS
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -702,7 +750,7 @@ const BalanceScreen: React.FC = () => {
                 width={getResponsiveSize(20)}
                 height={getResponsiveSize(20)}
               />
-              <Text style={balanceScreenStyles.transactionsTitle}>Transactions:</Text>
+              <Text style={balanceScreenStyles.transactionsTitle} {...textScaleProps}>Transactions:</Text>
             </View>
 
             <View style={balanceScreenStyles.controlsContainer}>
@@ -755,60 +803,63 @@ const BalanceScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
 
-              <View style={balanceScreenStyles.viewToggleContainer}>
+              <View style={balanceScreenStyles.signDropdownAnchor}>
                 <TouchableOpacity
-                  style={[
-                    balanceScreenStyles.viewToggleButton,
-                    signFilter === 'all' && balanceScreenStyles.viewToggleButtonActive,
-                  ]}
-                  onPress={() => setSignFilter('all')}
+                  style={balanceScreenStyles.signDropdownTrigger}
+                  onPress={() => {
+                    setIsFilterDropdownVisible(false);
+                    setIsSignDropdownVisible((prev) => !prev);
+                  }}
                 >
-                  <Ionicons name="git-branch-outline" size={16} color={signFilter === 'all' ? '#FFFFFF' : colors.primary} />
-                  <Text
-                    style={[
-                      balanceScreenStyles.viewToggleText,
-                      signFilter === 'all' && balanceScreenStyles.viewToggleTextActive,
-                    ]}
-                  >
-                    All
-                  </Text>
+                  <Ionicons
+                    name={signFilter === 'credit' ? 'add-circle' : signFilter === 'debit' ? 'remove-circle' : 'git-branch-outline'}
+                    size={16}
+                    color={colors.primary}
+                  />
+                  <Text style={balanceScreenStyles.signDropdownTriggerText}>{getSignFilterLabel()}</Text>
+                  <Ionicons
+                    name={isSignDropdownVisible ? 'chevron-up' : 'chevron-down'}
+                    size={14}
+                    color={colors.primary}
+                  />
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    balanceScreenStyles.viewToggleButton,
-                    signFilter === 'credit' && balanceScreenStyles.viewToggleButtonActive,
-                  ]}
-                  onPress={() => setSignFilter('credit')}
-                >
-                  <Ionicons name="add-circle" size={16} color={signFilter === 'credit' ? '#FFFFFF' : colors.primary} />
-                  <Text
-                    style={[
-                      balanceScreenStyles.viewToggleText,
-                      signFilter === 'credit' && balanceScreenStyles.viewToggleTextActive,
-                    ]}
-                  >
-                    + Tokens
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    balanceScreenStyles.viewToggleButton,
-                    signFilter === 'debit' && balanceScreenStyles.viewToggleButtonActive,
-                  ]}
-                  onPress={() => setSignFilter('debit')}
-                >
-                  <Ionicons name="remove-circle" size={16} color={signFilter === 'debit' ? '#FFFFFF' : colors.primary} />
-                  <Text
-                    style={[
-                      balanceScreenStyles.viewToggleText,
-                      signFilter === 'debit' && balanceScreenStyles.viewToggleTextActive,
-                    ]}
-                  >
-                    - Tokens
-                  </Text>
-                </TouchableOpacity>
+                {isSignDropdownVisible && (
+                  <View style={balanceScreenStyles.signDropdownMenu}>
+                    {[
+                      { key: 'all', label: 'All', icon: 'git-branch-outline' },
+                      { key: 'credit', label: '+ Tokens', icon: 'add-circle' },
+                      { key: 'debit', label: '- Tokens', icon: 'remove-circle' },
+                    ].map((option) => (
+                      <TouchableOpacity
+                        key={option.key}
+                        style={[
+                          balanceScreenStyles.signDropdownItem,
+                          signFilter === option.key && balanceScreenStyles.signDropdownItemActive,
+                        ]}
+                        onPress={() => {
+                          setSignFilter(option.key as 'all' | 'credit' | 'debit');
+                          setIsSignDropdownVisible(false);
+                        }}
+                      >
+                        <View style={balanceScreenStyles.signDropdownItemLeft}>
+                          <Ionicons name={option.icon as any} size={16} color={signFilter === option.key ? colors.primary : colors.textSecondary} />
+                          <Text
+                            style={[
+                              balanceScreenStyles.signDropdownItemText,
+                              signFilter === option.key && balanceScreenStyles.signDropdownItemTextActive,
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                        </View>
+                        {signFilter === option.key && (
+                          <Ionicons name="checkmark" size={16} color={colors.primary} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
 
@@ -816,7 +867,10 @@ const BalanceScreen: React.FC = () => {
               <View style={balanceScreenStyles.filterDropdownAnchor}>
                 <TouchableOpacity
                   style={balanceScreenStyles.filterDropdownTrigger}
-                  onPress={() => setIsFilterDropdownVisible((prev) => !prev)}
+                  onPress={() => {
+                    setIsSignDropdownVisible(false);
+                    setIsFilterDropdownVisible((prev) => !prev);
+                  }}
                 >
                   <Ionicons name="filter" size={14} color={colors.primary} />
                   <Text style={balanceScreenStyles.filterDropdownTriggerText}>{getDateFilterLabel()}</Text>
@@ -874,12 +928,12 @@ const BalanceScreen: React.FC = () => {
             {isLoading ? (
               <View style={balanceScreenStyles.transactionsLoadingContainer}>
                 <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={balanceScreenStyles.transactionsLoadingText}>Loading transactions...</Text>
+                <Text style={balanceScreenStyles.transactionsLoadingText} {...textScaleProps}>Loading transactions...</Text>
               </View>
             ) : filteredTransactions.length === 0 ? (
               <View style={balanceScreenStyles.emptyTransactionsContainer}>
-                <Text style={balanceScreenStyles.emptyTransactionsText}>No transactions found</Text>
-                <Text style={balanceScreenStyles.emptyTransactionsSubtext}>Try changing your search or date filter</Text>
+                <Text style={balanceScreenStyles.emptyTransactionsText} {...textScaleProps}>No transactions found</Text>
+                <Text style={balanceScreenStyles.emptyTransactionsSubtext} {...textScaleProps}>Try changing your search or date filter</Text>
               </View>
             ) : (
               <View style={viewMode === 'grid' ? balanceScreenStyles.gridListContainer : undefined}>

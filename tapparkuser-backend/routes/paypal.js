@@ -4,6 +4,7 @@ const db = require('../config/database');
 const paypal = require('../config/paypal');
 const { logUserActivity, ActionTypes } = require('../utils/userLogger');
 const { settlePenaltyWithHours } = require('../utils/penaltyHelper');
+const { syncUserTokensFromSubscriptions } = require('../utils/subscriptionTokens');
 
 const router = express.Router();
 
@@ -225,6 +226,7 @@ router.post('/capture-order', authenticateToken, async (req, res) => {
          FROM subscriptions WHERE user_id = ? AND status = 'active'`,
         [req.user.user_id]
       );
+      await syncUserTokensFromSubscriptions(req.user.user_id);
 
       // Log subscription purchase
       await logUserActivity(

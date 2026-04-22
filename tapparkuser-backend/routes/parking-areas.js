@@ -7,6 +7,7 @@ const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validateBodyInt, validateParamInt } = require('../middleware/validation');
 const { logUserActivity, ActionTypes } = require('../utils/userLogger');
+const { syncUserTokensFromSubscriptions } = require('../utils/subscriptionTokens');
 const {
   emitReservationUpdated,
   emitSpotsUpdated,
@@ -452,7 +453,12 @@ router.post('/book', authenticateToken, validateBodyInt('vehicleId', 'Vehicle ID
       // Atomically update spot status to 'reserved' (only if still available)
       // This prevents double booking even if two requests pass the check above
       const [updateResult] = await connection.execute(
-        'UPDATE parking_spot SET status = ? WHERE parking_spot_id = ? AND status = ?',
+        `UPDATE parking_spot
+         SET status = ?,
+             is_occupied = 0,
+             occupied_by = NULL,
+             occupied_at = NULL
+         WHERE parking_spot_id = ? AND status = ?`,
         ['reserved', spotId, 'available']
       );
 
@@ -1432,6 +1438,7 @@ router.get('/booking/:reservationId', authenticateToken, async (req, res) => {
                   ];
 
                   await db.transaction(transactionQueries);
+                  await syncUserTokensFromSubscriptions(booking.user_id);
 
                   await db.query(`
                     SELECT COALESCE(SUM(tokens_remaining), 0) as total_hours_remaining
@@ -1873,7 +1880,10 @@ router.put('/end-session/:reservationId', authenticateToken, validateParamInt('r
       if (reservationData.parking_spots_id && Number(reservationData.parking_spots_id) > 0) {
         await connection.execute(
           `UPDATE parking_spot 
-           SET status = 'available'
+           SET status = 'available',
+               is_occupied = 0,
+               occupied_by = NULL,
+               occupied_at = NULL
            WHERE parking_spot_id = ?`,
           [reservationData.parking_spots_id]
         );
