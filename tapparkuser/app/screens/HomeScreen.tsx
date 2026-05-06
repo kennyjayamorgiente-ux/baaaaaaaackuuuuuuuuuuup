@@ -523,22 +523,23 @@ export default function HomeScreen() {
     return '#9CA3AF'; // Gray default
   };
 
-  const getAreaSpotsText = (area: any) => {
-    const available = Number.isFinite(Number(area?.available_spots)) ? Number(area.available_spots) : 0;
-    const total = Number.isFinite(Number(area?.total_spots)) ? Number(area.total_spots) : 0;
-    return `${available} / ${total} spots available`;
-  };
+  const getAreaVehicleAvailability = (area: any) => {
+    const toNumber = (value: unknown) => (Number.isFinite(Number(value)) ? Number(value) : 0);
 
-  const getAreaCapacityText = (area: any) => {
-    const availableCapacity = Number.isFinite(Number(area?.capacity_available_spots))
-      ? Number(area.capacity_available_spots)
-      : 0;
-    const totalCapacity = Number.isFinite(Number(area?.capacity_total_spots))
-      ? Number(area.capacity_total_spots)
-      : 0;
-
-    if (totalCapacity <= 0) return null;
-    return `Motorcycle/Bike: ${availableCapacity} / ${totalCapacity} spots available`;
+    return {
+      car: {
+        total: toNumber(area?.car_total_spots),
+        available: toNumber(area?.car_available_spots),
+      },
+      motorcycle: {
+        total: toNumber(area?.motorcycle_total_spots),
+        available: toNumber(area?.motorcycle_available_spots),
+      },
+      bike: {
+        total: toNumber(area?.bike_total_spots),
+        available: toNumber(area?.bike_available_spots),
+      },
+    };
   };
 
   // Format time for display
@@ -3615,20 +3616,25 @@ export default function HomeScreen() {
                       </Text>
                       <Text
                         style={[homeScreenStyles.areaSpotsText, { color: colors.textSecondary }]}
-                        numberOfLines={2}
+                        numberOfLines={1}
                         ellipsizeMode="tail"
                       >
-                        {getAreaSpotsText(area)}
+                        {`Car: ${getAreaVehicleAvailability(area).car.total} total, ${getAreaVehicleAvailability(area).car.available} available spots`}
                       </Text>
-                      {getAreaCapacityText(area) && (
-                        <Text
-                          style={[homeScreenStyles.areaCapacityText, { color: colors.textSecondary }]}
-                          numberOfLines={2}
-                          ellipsizeMode="tail"
-                        >
-                          {getAreaCapacityText(area)}
-                        </Text>
-                      )}
+                      <Text
+                        style={[homeScreenStyles.areaCapacityText, { color: colors.textSecondary }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {`Motorcycle: ${getAreaVehicleAvailability(area).motorcycle.total} total, ${getAreaVehicleAvailability(area).motorcycle.available} available spots`}
+                      </Text>
+                      <Text
+                        style={[homeScreenStyles.areaCapacityText, { color: colors.textSecondary }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {`Bike: ${getAreaVehicleAvailability(area).bike.total} total, ${getAreaVehicleAvailability(area).bike.available} available spots`}
+                      </Text>
                     </View>
                     <View style={homeScreenStyles.areaMarkerSlot}>
                       <Ionicons

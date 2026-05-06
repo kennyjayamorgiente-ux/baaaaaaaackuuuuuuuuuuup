@@ -182,8 +182,8 @@ export const getProfileScreenStyles = (colors: ThemeColors) => StyleSheet.create
   },
   editIconContainer: {
     position: 'absolute',
-    bottom: -getResponsiveSize(16),
-    right: -getResponsiveSize(16),
+    bottom: getResponsiveSize(8),
+    right: getResponsiveSize(8),
     backgroundColor: colors.primary,
     width: getResponsiveSize(32),
     height: getResponsiveSize(32),

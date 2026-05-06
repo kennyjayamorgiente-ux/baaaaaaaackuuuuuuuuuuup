@@ -1081,6 +1081,12 @@ export class ApiService {
           longitude: number | null;
           total_spots: number;
           available_spots: number;
+          car_total_spots?: number;
+          car_available_spots?: number;
+          motorcycle_total_spots?: number;
+          motorcycle_available_spots?: number;
+          bike_total_spots?: number;
+          bike_available_spots?: number;
           capacity_total_spots?: number;
           capacity_available_spots?: number;
           hourly_rate: string;

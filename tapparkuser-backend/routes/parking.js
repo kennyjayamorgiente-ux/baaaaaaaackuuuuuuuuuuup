@@ -139,21 +139,45 @@ router.get('/locations', async (req, res) => {
         pa.location as address, 
         NULL as latitude, 
         NULL as longitude, 
-        COUNT(ps.parking_spot_id) as total_spots, 
-        COUNT(CASE WHEN ps.status = 'available' THEN 1 END) as available_spots, 
-        SUM(
-          CASE
-            WHEN psec.section_mode = 'capacity_only' AND psec.vehicle_type IN ('motorcycle', 'bicycle')
-            THEN COALESCE(psec.capacity, 0)
-            ELSE 0
-          END
+        (
+          COALESCE(regular_counts.car_total_spots, 0) +
+          COALESCE(regular_counts.motorcycle_total_spots, 0) +
+          COALESCE(regular_counts.bike_total_spots, 0) +
+          COALESCE(capacity_counts.motorcycle_total_spots, 0) +
+          COALESCE(capacity_counts.bike_total_spots, 0)
+        ) as total_spots,
+        (
+          COALESCE(regular_counts.car_available_spots, 0) +
+          COALESCE(regular_counts.motorcycle_available_spots, 0) +
+          COALESCE(regular_counts.bike_available_spots, 0) +
+          COALESCE(capacity_counts.motorcycle_available_spots, 0) +
+          COALESCE(capacity_counts.bike_available_spots, 0)
+        ) as available_spots,
+        COALESCE(regular_counts.car_total_spots, 0) as car_total_spots,
+        COALESCE(regular_counts.car_available_spots, 0) as car_available_spots,
+        (
+          COALESCE(regular_counts.motorcycle_total_spots, 0) +
+          COALESCE(capacity_counts.motorcycle_total_spots, 0)
+        ) as motorcycle_total_spots,
+        (
+          COALESCE(regular_counts.motorcycle_available_spots, 0) +
+          COALESCE(capacity_counts.motorcycle_available_spots, 0)
+        ) as motorcycle_available_spots,
+        (
+          COALESCE(regular_counts.bike_total_spots, 0) +
+          COALESCE(capacity_counts.bike_total_spots, 0)
+        ) as bike_total_spots,
+        (
+          COALESCE(regular_counts.bike_available_spots, 0) +
+          COALESCE(capacity_counts.bike_available_spots, 0)
+        ) as bike_available_spots,
+        (
+          COALESCE(capacity_counts.motorcycle_total_spots, 0) +
+          COALESCE(capacity_counts.bike_total_spots, 0)
         ) as capacity_total_spots,
-        SUM(
-          CASE
-            WHEN psec.section_mode = 'capacity_only' AND psec.vehicle_type IN ('motorcycle', 'bicycle')
-            THEN GREATEST(COALESCE(psec.capacity, 0) - COALESCE(psec.parked_count, 0) - COALESCE(psec.reserved_count, 0), 0)
-            ELSE 0
-          END
+        (
+          COALESCE(capacity_counts.motorcycle_available_spots, 0) +
+          COALESCE(capacity_counts.bike_available_spots, 0)
         ) as capacity_available_spots,
         50.00 as hourly_rate, 
         500.00 as daily_rate, 
@@ -161,10 +185,39 @@ router.get('/locations', async (req, res) => {
         'Basic parking' as amenities, 
         pa.status as is_active
       FROM parking_area pa
-      LEFT JOIN parking_section psec ON pa.parking_area_id = psec.parking_area_id
-      LEFT JOIN parking_spot ps ON psec.parking_section_id = ps.parking_section_id
+      LEFT JOIN (
+        SELECT
+          psec.parking_area_id,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'car' THEN 1 ELSE 0 END) as car_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'car' AND ps.status = 'available' THEN 1 ELSE 0 END) as car_available_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'motorcycle' THEN 1 ELSE 0 END) as motorcycle_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'motorcycle' AND ps.status = 'available' THEN 1 ELSE 0 END) as motorcycle_available_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) IN ('bike', 'bicycle', 'ebike', 'e-bike') THEN 1 ELSE 0 END) as bike_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) IN ('bike', 'bicycle', 'ebike', 'e-bike') AND ps.status = 'available' THEN 1 ELSE 0 END) as bike_available_spots
+        FROM parking_section psec
+        LEFT JOIN parking_spot ps ON psec.parking_section_id = ps.parking_section_id
+        WHERE COALESCE(psec.section_mode, '') <> 'capacity_only'
+        GROUP BY psec.parking_area_id
+      ) regular_counts ON pa.parking_area_id = regular_counts.parking_area_id
+      LEFT JOIN (
+        SELECT
+          psec.parking_area_id,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'motorcycle' THEN COALESCE(psec.capacity, 0) ELSE 0 END) as motorcycle_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'motorcycle' THEN GREATEST(COALESCE(psec.capacity, 0) - COALESCE(psec.parked_count, 0) - COALESCE(psec.reserved_count, 0), 0) ELSE 0 END) as motorcycle_available_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) IN ('bike', 'bicycle', 'ebike', 'e-bike') THEN COALESCE(psec.capacity, 0) ELSE 0 END) as bike_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) IN ('bike', 'bicycle', 'ebike', 'e-bike') THEN GREATEST(COALESCE(psec.capacity, 0) - COALESCE(psec.parked_count, 0) - COALESCE(psec.reserved_count, 0), 0) ELSE 0 END) as bike_available_spots
+        FROM parking_section psec
+        WHERE psec.section_mode = 'capacity_only'
+        GROUP BY psec.parking_area_id
+      ) capacity_counts ON pa.parking_area_id = capacity_counts.parking_area_id
       WHERE pa.status = 'active'
-      GROUP BY pa.parking_area_id, pa.parking_area_name, pa.location, pa.status
+      GROUP BY 
+        pa.parking_area_id, pa.parking_area_name, pa.location, pa.status,
+        regular_counts.car_total_spots, regular_counts.car_available_spots,
+        regular_counts.motorcycle_total_spots, regular_counts.motorcycle_available_spots,
+        regular_counts.bike_total_spots, regular_counts.bike_available_spots,
+        capacity_counts.motorcycle_total_spots, capacity_counts.motorcycle_available_spots,
+        capacity_counts.bike_total_spots, capacity_counts.bike_available_spots
     `;
 
     const params = [];
@@ -209,21 +262,45 @@ router.get('/locations/:id', async (req, res) => {
         pa.location as address, 
         NULL as latitude, 
         NULL as longitude, 
-        COUNT(ps.parking_spot_id) as total_spots, 
-        COUNT(CASE WHEN ps.status = 'free' THEN 1 END) as available_spots, 
-        SUM(
-          CASE
-            WHEN psec.section_mode = 'capacity_only' AND psec.vehicle_type IN ('motorcycle', 'bicycle')
-            THEN COALESCE(psec.capacity, 0)
-            ELSE 0
-          END
+        (
+          COALESCE(regular_counts.car_total_spots, 0) +
+          COALESCE(regular_counts.motorcycle_total_spots, 0) +
+          COALESCE(regular_counts.bike_total_spots, 0) +
+          COALESCE(capacity_counts.motorcycle_total_spots, 0) +
+          COALESCE(capacity_counts.bike_total_spots, 0)
+        ) as total_spots,
+        (
+          COALESCE(regular_counts.car_available_spots, 0) +
+          COALESCE(regular_counts.motorcycle_available_spots, 0) +
+          COALESCE(regular_counts.bike_available_spots, 0) +
+          COALESCE(capacity_counts.motorcycle_available_spots, 0) +
+          COALESCE(capacity_counts.bike_available_spots, 0)
+        ) as available_spots,
+        COALESCE(regular_counts.car_total_spots, 0) as car_total_spots,
+        COALESCE(regular_counts.car_available_spots, 0) as car_available_spots,
+        (
+          COALESCE(regular_counts.motorcycle_total_spots, 0) +
+          COALESCE(capacity_counts.motorcycle_total_spots, 0)
+        ) as motorcycle_total_spots,
+        (
+          COALESCE(regular_counts.motorcycle_available_spots, 0) +
+          COALESCE(capacity_counts.motorcycle_available_spots, 0)
+        ) as motorcycle_available_spots,
+        (
+          COALESCE(regular_counts.bike_total_spots, 0) +
+          COALESCE(capacity_counts.bike_total_spots, 0)
+        ) as bike_total_spots,
+        (
+          COALESCE(regular_counts.bike_available_spots, 0) +
+          COALESCE(capacity_counts.bike_available_spots, 0)
+        ) as bike_available_spots,
+        (
+          COALESCE(capacity_counts.motorcycle_total_spots, 0) +
+          COALESCE(capacity_counts.bike_total_spots, 0)
         ) as capacity_total_spots,
-        SUM(
-          CASE
-            WHEN psec.section_mode = 'capacity_only' AND psec.vehicle_type IN ('motorcycle', 'bicycle')
-            THEN GREATEST(COALESCE(psec.capacity, 0) - COALESCE(psec.parked_count, 0) - COALESCE(psec.reserved_count, 0), 0)
-            ELSE 0
-          END
+        (
+          COALESCE(capacity_counts.motorcycle_available_spots, 0) +
+          COALESCE(capacity_counts.bike_available_spots, 0)
         ) as capacity_available_spots,
         50.00 as hourly_rate, 
         500.00 as daily_rate, 
@@ -231,10 +308,39 @@ router.get('/locations/:id', async (req, res) => {
         'Basic parking' as amenities, 
         pa.status as is_active
       FROM parking_area pa
-      LEFT JOIN parking_section psec ON pa.parking_area_id = psec.parking_area_id
-      LEFT JOIN parking_spot ps ON psec.parking_section_id = ps.parking_section_id
+      LEFT JOIN (
+        SELECT
+          psec.parking_area_id,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'car' THEN 1 ELSE 0 END) as car_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'car' AND ps.status = 'available' THEN 1 ELSE 0 END) as car_available_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'motorcycle' THEN 1 ELSE 0 END) as motorcycle_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'motorcycle' AND ps.status = 'available' THEN 1 ELSE 0 END) as motorcycle_available_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) IN ('bike', 'bicycle', 'ebike', 'e-bike') THEN 1 ELSE 0 END) as bike_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) IN ('bike', 'bicycle', 'ebike', 'e-bike') AND ps.status = 'available' THEN 1 ELSE 0 END) as bike_available_spots
+        FROM parking_section psec
+        LEFT JOIN parking_spot ps ON psec.parking_section_id = ps.parking_section_id
+        WHERE COALESCE(psec.section_mode, '') <> 'capacity_only'
+        GROUP BY psec.parking_area_id
+      ) regular_counts ON pa.parking_area_id = regular_counts.parking_area_id
+      LEFT JOIN (
+        SELECT
+          psec.parking_area_id,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'motorcycle' THEN COALESCE(psec.capacity, 0) ELSE 0 END) as motorcycle_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) = 'motorcycle' THEN GREATEST(COALESCE(psec.capacity, 0) - COALESCE(psec.parked_count, 0) - COALESCE(psec.reserved_count, 0), 0) ELSE 0 END) as motorcycle_available_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) IN ('bike', 'bicycle', 'ebike', 'e-bike') THEN COALESCE(psec.capacity, 0) ELSE 0 END) as bike_total_spots,
+          SUM(CASE WHEN LOWER(COALESCE(psec.vehicle_type, '')) IN ('bike', 'bicycle', 'ebike', 'e-bike') THEN GREATEST(COALESCE(psec.capacity, 0) - COALESCE(psec.parked_count, 0) - COALESCE(psec.reserved_count, 0), 0) ELSE 0 END) as bike_available_spots
+        FROM parking_section psec
+        WHERE psec.section_mode = 'capacity_only'
+        GROUP BY psec.parking_area_id
+      ) capacity_counts ON pa.parking_area_id = capacity_counts.parking_area_id
       WHERE pa.parking_area_id = ? AND pa.status = 'active'
-      GROUP BY pa.parking_area_id, pa.parking_area_name, pa.location, pa.status
+      GROUP BY 
+        pa.parking_area_id, pa.parking_area_name, pa.location, pa.status,
+        regular_counts.car_total_spots, regular_counts.car_available_spots,
+        regular_counts.motorcycle_total_spots, regular_counts.motorcycle_available_spots,
+        regular_counts.bike_total_spots, regular_counts.bike_available_spots,
+        capacity_counts.motorcycle_total_spots, capacity_counts.motorcycle_available_spots,
+        capacity_counts.bike_total_spots, capacity_counts.bike_available_spots
     `, [id]);
 
     if (locations.length === 0) {

@@ -1,0 +1,1065 @@
+================================================================================
+                  TAPPARK UI SCREEN AND CONTROL INVENTORY
+================================================================================
+
+Generated from static code inspection on 2026-04-22
+Source checked:
+- `tapparkuser`
+- `tapparkuser-backend` only when needed for destination/logic notes
+
+Purpose:
+- Inventory screens and interactive UI controls
+- List what each button/control does
+- Keep `TAPPARK_APP_FUNCTIONALITY.txt` unchanged
+
+Important note:
+- This is a code-based UI inventory, not a runtime-tested QA checklist
+- Repeating controls are listed once per pattern, not once per rendered item
+- Dynamic SVG spot overlays are treated as one control type per screen
+
+================================================================================
+                                LEGEND
+================================================================================
+
+Type:
+- `button`
+- `toggle`
+- `link`
+- `card`
+- `icon button`
+- `modal action`
+- `list item`
+- `form control`
+- `overlay spot`
+
+Destination:
+- route pushed/replaced when applicable
+- modal opened/closed when applicable
+- API/action summary when no route change happens
+
+================================================================================
+                        1. GLOBAL / SHARED CONTROLS
+================================================================================
+
+1.1 `SharedHeader`
+
+- Type: `icon button`
+  Label: left header button
+  Action: opens drawer or performs back action depending on props
+  Destination: custom callback or drawer toggle
+
+- Type: `icon button`
+  Label: right header button
+  Action: optional secondary action
+  Destination: custom callback
+
+1.2 `CustomDrawer`
+
+- Type: `button`
+  Label: `Home`
+  Action: navigate to home
+  Destination: `/screens/HomeScreen`
+
+- Type: `button`
+  Label: `Profile`
+  Action: navigate to profile
+  Destination: `/ProfileScreen`
+
+- Type: `button`
+  Label: `Favorites`
+  Action: navigate to favorites
+  Destination: `/screens/FavoritesScreen`
+
+- Type: `button`
+  Label: `Active Parking`
+  Action: navigate to active parking
+  Destination: `/screens/ActiveParkingScreen`
+
+- Type: `button`
+  Label: `History`
+  Action: navigate to history
+  Destination: `/screens/HistoryScreen`
+
+- Type: `toggle`
+  Label: theme toggle
+  Action: switch light/dark theme
+  Destination: ThemeContext toggle
+
+- Type: `button`
+  Label: `Log Out`
+  Action: logout current user
+  Destination: `/screens/LoginScreen`
+
+- Type: `icon button`
+  Label: drawer close/backdrop tap
+  Action: close drawer
+  Destination: drawer closed
+
+================================================================================
+                          2. ROUTE / SCREEN LIST
+================================================================================
+
+User-facing screens found:
+- `Splash1Screen`
+- `GreetingsScreen`
+- `LoginScreen`
+- `SignupScreen`
+- `AboutScreen`
+- `HomeScreen`
+- `ActiveParkingScreen`
+- `FavoritesScreen`
+- `HistoryScreen`
+- `BalanceScreen`
+- `TopUpScreen`
+- `AddVehicleScreen`
+- `RegisteredVehiclesScreen`
+- `ChangePasswordScreen`
+- `TermsAndConditionsScreen`
+- `FAQScreen`
+- `MyFeedbackScreen`
+- `FeedbackScreen`
+- `SubscriptionPlansScreen`
+- `ProfileScreen`
+
+Attendant-facing screens found:
+- `DashboardScreen`
+- `QRScannerScreen`
+
+================================================================================
+                        3. SCREEN-BY-SCREEN INVENTORY
+================================================================================
+
+3.1 `Splash1Screen`
+
+- Type: screen
+  Purpose: loading/auth gate
+
+- Type: automatic route action
+  Label: auth redirect
+  Action: redirects after auth check
+  Destination: login, home, or attendant dashboard depending on auth state
+
+3.2 `GreetingsScreen`
+
+- Type: `button`
+  Label: `Sign Up`
+  Action: open signup
+  Destination: `/screens/SignupScreen`
+
+- Type: `button`
+  Label: `Login`
+  Action: open login
+  Destination: `/screens/LoginScreen`
+
+3.3 `LoginScreen`
+
+- Type: `form control`
+  Label: email / identifier field
+  Action: enter credentials
+
+- Type: `form control`
+  Label: password field
+  Action: enter password
+
+- Type: `icon button`
+  Label: password eye icon
+  Action: toggle password visibility
+
+- Type: `toggle`
+  Label: `Remember Me`
+  Action: toggle remember-me state
+
+- Type: `button`
+  Label: `Login`
+  Action: submit login
+  Destination:
+  - `/attendant-screen/DashboardScreen` for attendants
+  - `/screens/HomeScreen` for regular users/admin
+
+- Type: `link`
+  Label: `Register`
+  Action: open signup
+  Destination: `/screens/SignupScreen`
+
+3.4 `SignupScreen`
+
+- Type: `form control`
+  Label: school ID field
+  Action: enter school ID / used in lookup flow
+
+- Type: `form control`
+  Label: first name field
+  Action: enter first name
+
+- Type: `form control`
+  Label: last name field
+  Action: enter last name
+
+- Type: `form control`
+  Label: email field
+  Action: enter email
+
+- Type: `form control`
+  Label: password field
+  Action: enter password
+
+- Type: `button`
+  Label: `Go Back`
+  Action: go back from signup
+  Destination: previous/auth flow
+
+- Type: `button`
+  Label: `Sign Up`
+  Action: submit registration
+  Destination:
+  - `/screens/AboutScreen`
+  - `/screens/HomeScreen`
+  depending on onboarding conditions in code
+
+3.5 `AboutScreen`
+
+- Type: `button`
+  Label: arrow / next button
+  Action: continue onboarding
+  Destination: `/screens/HomeScreen`
+
+3.6 `HomeScreen`
+
+Core recurring controls on Home:
+
+- Type: `icon button`
+  Label: header menu button
+  Action: open drawer
+
+- Type: `button`
+  Label: `Add Vehicle`
+  Action: open add-vehicle flow
+  Destination: `/screens/AddVehicleScreen`
+
+- Type: `card`
+  Label: registered vehicle card
+  Action: begin booking flow using selected vehicle
+  Destination: booking/selection modal or booking sequence
+
+- Type: `card`
+  Label: frequent spot card
+  Action: inspect/rebook frequent spot
+  Destination: booking flow
+
+- Type: `button`
+  Label: `BOOK` on frequent spot card
+  Action: book selected frequent spot
+  Destination: booking flow -> `/screens/ActiveParkingScreen` on success
+
+- Type: `card`
+  Label: parking area card
+  Action: open area-related booking/layout flow
+  Destination: area selection / parking layout flow
+
+- Type: `button`
+  Label: see all spots / all-spots entry
+  Action: open all spots modal
+  Destination: spots modal
+
+- Type: `button`
+  Label: close all-spots modal
+  Action: close modal
+
+- Type: `button`
+  Label: close frequent spots modal
+  Action: close modal
+
+- Type: `button`
+  Label: `BOOK` inside frequent spots modal
+  Action: book chosen frequent spot
+  Destination: booking flow -> `/screens/ActiveParkingScreen` on success
+
+- Type: `button`
+  Label: terms modal accept action
+  Action: accept terms
+  Destination: backend accept-terms flow, modal closes
+
+- Type: `button`
+  Label: insufficient balance `Maybe Later`
+  Action: close insufficient-balance modal
+
+- Type: `button`
+  Label: insufficient balance `View Plans`
+  Action: open plans/top-up screen
+  Destination: `/screens/TopUpScreen`
+
+Dynamic Home controls:
+
+- Type: `overlay spot`
+  Label: parking spot overlay in layout
+  Action: tap spot to inspect details/status
+  Destination: spot details/modal
+
+- Type: `modal action`
+  Label: booking confirmation actions
+  Action: confirm/cancel booking
+  Destination: booking request or modal close
+
+- Type: `modal action`
+  Label: vehicle selection actions
+  Action: choose vehicle for booking
+  Destination: booking request
+
+3.7 `ActiveParkingScreen`
+
+Persistent controls:
+
+- Type: `button`
+  Label: `Go Back to Home`
+  Action: leave active parking screen
+  Destination: previous/home path
+
+- Type: `button`
+  Label: `Try Again`
+  Action: retry loading active parking/session state
+
+- Type: `tab control`
+  Label: parking ticket tab
+  Action: show ticket view
+
+- Type: `tab control`
+  Label: parking layout tab
+  Action: show layout view
+
+- Type: `tab control`
+  Label: parking time tab
+  Action: show timer/details view
+
+- Type: `button`
+  Label: add to favorites
+  Action: save current spot as favorite
+
+- Type: `button`
+  Label: refresh layout
+  Action: reload layout/spot state
+
+- Type: `overlay spot`
+  Label: interactive parking spot
+  Action: inspect spot details
+  Destination: spot modal
+
+Modal controls:
+
+- Type: `modal action`
+  Label: close spot modal
+  Action: close modal
+
+- Type: `modal action`
+  Label: close parking end modal
+  Action: close summary and route home
+  Destination: `/screens/HomeScreen`
+
+- Type: `modal action`
+  Label: grace-period warning close
+  Action: dismiss warning modal
+
+3.8 `FavoritesScreen`
+
+- Type: `icon button`
+  Label: header menu/back via SharedHeader
+  Action: standard header action
+
+- Type: `list item`
+  Label: favorite parking card
+  Action: inspect favorite item
+
+- Type: `button`
+  Label: remove favorite
+  Action: remove saved favorite
+  Destination: refresh favorites list
+
+- Type: `button`
+  Label: `BOOK`
+  Action: rebook selected favorite
+  Destination: `/screens/ActiveParkingScreen` on success
+
+- Type: `toggle`
+  Label: list/grid switch
+  Action: change favorites list presentation
+
+- Type: `search`
+  Label: search field
+  Action: filter favorites
+
+- Type: `filter`
+  Label: date/status filters where present in screen state
+  Action: refine visible list
+
+- Type: `modal action`
+  Label: vehicle selection modal choose vehicle
+  Action: select vehicle for booking
+
+- Type: `modal action`
+  Label: vehicle selection `Book Now`
+  Action: confirm booking from favorite
+
+3.9 `HistoryScreen`
+
+- Type: `search`
+  Label: search field
+  Action: filter history by reservation/content fields
+
+- Type: `toggle`
+  Label: `List`
+  Action: set list view
+
+- Type: `toggle`
+  Label: `Grid`
+  Action: set grid view
+
+- Type: `filter`
+  Label: date filter trigger
+  Action: open filter dropdown
+
+- Type: `filter option`
+  Label: `All Time`
+  Action: set filter
+
+- Type: `filter option`
+  Label: `Last 7 Days`
+  Action: set filter
+
+- Type: `filter option`
+  Label: `This Month`
+  Action: set filter
+
+- Type: `filter option`
+  Label: `This Year`
+  Action: set filter
+
+- Type: `filter option`
+  Label: `Last Year`
+  Action: set filter
+
+- Type: `filter option`
+  Label: `Custom Range`
+  Action: open custom date modal
+
+- Type: `list item`
+  Label: reservation/history card
+  Action: open reservation details modal
+
+- Type: `icon button`
+  Label: trash button
+  Action: delete history item
+
+- Type: `icon button`
+  Label: heart button
+  Action: add spot to favorites
+
+- Type: `button`
+  Label: `BOOK`
+  Action: book again from history
+  Destination: vehicle selection -> `/screens/ActiveParkingScreen` on success
+
+- Type: `button`
+  Label: scroll-to-top floating button
+  Action: scroll list to top
+
+Custom date modal:
+
+- Type: `button`
+  Label: close custom date modal
+  Action: close modal
+
+- Type: `button`
+  Label: `Clear`
+  Action: clear custom date filter
+
+- Type: `button`
+  Label: `Apply`
+  Action: apply custom range
+
+Vehicle selection modal:
+
+- Type: `button`
+  Label: close vehicle selection modal
+  Action: close modal
+
+- Type: `list item`
+  Label: vehicle option card
+  Action: select vehicle
+
+- Type: `button`
+  Label: `Book Now`
+  Action: confirm rebooking
+  Destination: `/screens/ActiveParkingScreen` on success
+
+Mismatch modal:
+
+- Type: `button`
+  Label: close mismatch modal
+  Action: close modal
+
+- Type: `button`
+  Label: `Got it!`
+  Action: dismiss mismatch alert modal
+
+Reservation detail modal:
+
+- Type: `button`
+  Label: close reservation modal
+  Action: close modal
+
+3.10 `BalanceScreen`
+
+- Type: `button`
+  Label: `+ ADD TOKENS`
+  Action: open top-up
+  Destination: `/screens/TopUpScreen`
+
+- Type: `search`
+  Label: transaction search
+  Action: filter transactions
+
+- Type: `toggle`
+  Label: `List`
+  Action: set list view
+
+- Type: `toggle`
+  Label: `Grid`
+  Action: set grid view
+
+- Type: `toggle`
+  Label: `All`
+  Action: show all transaction signs
+
+- Type: `toggle`
+  Label: `+ Tokens`
+  Action: show credit transactions
+
+- Type: `toggle`
+  Label: `- Tokens`
+  Action: show debit transactions
+
+- Type: `filter`
+  Label: date filter trigger
+  Action: open date filter options
+
+- Type: `filter option`
+  Label: `All Time` / `Last 7 Days` / `This Month` / `This Year` / `Last Year` / `Custom Range`
+  Action: apply transaction date filters
+
+- Type: `list item`
+  Label: transaction card
+  Action: open transaction details modal
+
+- Type: `button`
+  Label: retry on error state
+  Action: reload transactions/balance if shown
+
+- Type: `button`
+  Label: custom date `Clear`
+  Action: clear date filter
+
+- Type: `button`
+  Label: custom date `Apply`
+  Action: apply date filter
+
+3.11 `TopUpScreen`
+
+- Type: `icon button`
+  Label: header back button
+  Action: go back
+
+- Type: `list item`
+  Label: plan card
+  Action: select plan
+  Destination: confirmation modal
+
+Confirmation modal:
+
+- Type: `button`
+  Label: close confirmation modal
+  Action: close modal
+
+- Type: `button`
+  Label: `Cancel`
+  Action: close modal
+
+- Type: `button`
+  Label: `Confirm`
+  Action: create PayPal order
+  Destination: PayPal WebView modal
+
+PayPal modal:
+
+- Type: `button`
+  Label: close PayPal modal
+  Action: close/dismiss PayPal modal
+
+- Type: `webview navigation`
+  Label: PayPal checkout URL flow
+  Action:
+  - success URL -> capture payment
+  - cancel URL -> cancel flow
+
+3.12 `AddVehicleScreen`
+
+- Type: `dropdown`
+  Label: vehicle type selector
+  Action: open/close type options
+
+- Type: `dropdown option`
+  Label: vehicle type option
+  Action: select type
+
+- Type: `form control`
+  Label: color field
+  Action: enter color
+
+- Type: `form control`
+  Label: plate number field
+  Action: enter plate number
+
+- Type: `form control`
+  Label: brand field
+  Action: enter brand
+
+- Type: `form control`
+  Label: model field
+  Action: enter model
+
+- Type: `button`
+  Label: `Go Back`
+  Action: go back
+
+- Type: `button`
+  Label: `+ Add`
+  Action: submit vehicle creation
+  Destination: `/screens/HomeScreen` on success
+
+3.13 `RegisteredVehiclesScreen`
+
+- Type: `icon button`
+  Label: header back button via SharedHeader
+  Action: standard back
+
+- Type: `icon button`
+  Label: delete vehicle icon on each card
+  Action: open delete confirmation modal
+
+- Type: `button`
+  Label: `Add Vehicle`
+  Action: open add-vehicle screen
+  Destination: `/screens/AddVehicleScreen`
+
+Delete confirmation modal:
+
+- Type: `button`
+  Label: `Cancel`
+  Action: close delete modal
+
+- Type: `button`
+  Label: `Delete`
+  Action: delete selected vehicle
+
+3.14 `ChangePasswordScreen`
+
+- Type: `form control`
+  Label: current password field
+  Action: enter current password
+
+- Type: `form control`
+  Label: new password field
+  Action: enter new password
+
+- Type: `form control`
+  Label: confirm password field
+  Action: enter confirmation
+
+- Type: `icon button`
+  Label: password visibility toggles
+  Action: show/hide password text
+
+- Type: `button`
+  Label: `Change Password`
+  Action: submit password change
+
+3.15 `TermsAndConditionsScreen`
+
+- Type: `icon button`
+  Label: header back button
+  Action: return to previous screen
+
+3.16 `FAQScreen`
+
+- Type: `icon button`
+  Label: header back button
+  Action: return to previous screen
+
+- Type: `list item`
+  Label: FAQ item
+  Action: expand/collapse answer
+
+3.17 `ProfileScreen`
+
+- Type: `icon button`
+  Label: edit profile picture button
+  Action: open profile-picture options modal
+
+Menu entries:
+
+- Type: `button`
+  Label: `Change Password`
+  Action: open password screen
+  Destination: `/screens/ChangePasswordScreen`
+
+- Type: `button`
+  Label: `Registered Vehicles`
+  Action: open registered vehicles
+  Destination: `/screens/RegisteredVehiclesScreen`
+
+- Type: `button`
+  Label: `Terms & Conditions`
+  Action: open terms screen
+  Destination: `/screens/TermsAndConditionsScreen`
+
+- Type: `button`
+  Label: `Balance`
+  Action: open balance screen
+  Destination: `/screens/BalanceScreen`
+
+- Type: `button`
+  Label: `FAQ`
+  Action: open FAQ screen
+  Destination: `/screens/FAQScreen`
+
+- Type: `button`
+  Label: `My Feedback`
+  Action: open feedback history
+  Destination: `/screens/MyFeedbackScreen`
+
+- Type: `button`
+  Label: `Rate us`
+  Action: open rating modal
+
+Profile-picture modal:
+
+- Type: `button`
+  Label: `Take Photo`
+  Action: launch camera for profile picture
+
+- Type: `button`
+  Label: `Choose from Library`
+  Action: launch image picker
+
+- Type: `button`
+  Label: `Remove Picture`
+  Action: remove profile picture
+
+- Type: `button`
+  Label: `Cancel`
+  Action: close modal
+
+Rating modal:
+
+- Type: `button`
+  Label: close `X`
+  Action: close modal
+
+- Type: `button`
+  Label: star 1..5
+  Action: set rating value
+
+- Type: `form control`
+  Label: optional feedback text
+  Action: enter feedback comment
+
+- Type: `button`
+  Label: `Cancel`
+  Action: clear form and close modal
+
+- Type: `button`
+  Label: `Submit`
+  Action: submit feedback
+
+3.18 `MyFeedbackScreen`
+
+- Type: `icon button`
+  Label: header back button
+  Action: route back to profile
+  Destination: `/ProfileScreen`
+
+- Type: `search`
+  Label: search field
+  Action: filter feedback list
+
+- Type: `toggle`
+  Label: `List`
+  Action: set list view
+
+- Type: `toggle`
+  Label: `Grid`
+  Action: set grid view
+
+- Type: `filter`
+  Label: date filter trigger
+  Action: open date filter options
+
+- Type: `filter option`
+  Label: `All Time` / `Last 7 Days` / `This Month` / `This Year` / `Last Year` / `Custom Range`
+  Action: apply filter
+
+- Type: `button`
+  Label: `Retry`
+  Action: reload feedback list on error state
+
+- Type: `button`
+  Label: `Go to Profile`
+  Action: return to profile when empty state is shown
+  Destination: `/ProfileScreen`
+
+- Type: `list item`
+  Label: feedback card
+  Action: open feedback details modal
+
+- Type: `button`
+  Label: scroll-to-top floating button
+  Action: scroll to top
+
+Custom filter modal:
+
+- Type: `button`
+  Label: close custom filter modal
+  Action: close modal
+
+- Type: `calendar day`
+  Label: date cell
+  Action: choose start/end date
+
+- Type: `button`
+  Label: `Clear`
+  Action: clear custom date filter
+
+- Type: `button`
+  Label: `Apply`
+  Action: apply custom date range
+
+Feedback details modal:
+
+- Type: `button`
+  Label: close details modal
+  Action: close modal
+
+3.19 `FeedbackScreen`
+
+- Type: `icon button`
+  Label: back button
+  Action: go back
+
+- Type: `form control`
+  Label: add comment text field
+  Action: enter comment
+
+- Type: `button`
+  Label: send comment button
+  Action: submit comment
+
+- Type: `list item`
+  Label: developer reply cards
+  Action: read-only review/reply display
+
+3.20 `SubscriptionPlansScreen`
+
+- Type: `list item`
+  Label: plan card
+  Action: select plan
+
+- Type: `button`
+  Label: `Purchase with PayPal` / select button
+  Action: begin PayPal checkout
+
+- Type: `button`
+  Label: close PayPal modal
+  Action: close/dismiss WebView modal
+
+3.21 `DashboardScreen` (Attendant)
+
+Header controls:
+
+- Type: `button`
+  Label: attendant profile/name group
+  Action: open attendant settings modal
+
+- Type: `icon button`
+  Label: activity history icon
+  Action: open activity history modal
+
+Parking slot controls:
+
+- Type: `toggle`
+  Label: list view icon
+  Action: show list layout
+
+- Type: `toggle`
+  Label: grid view icon
+  Action: show grid layout
+
+- Type: `filter`
+  Label: vehicle type filters
+  Action: filter slot display by vehicle type
+  Options:
+  - all
+  - car
+  - motorcycle
+  - bike/e-bike variant by icon set
+
+- Type: `list item`
+  Label: parking slot card / slot tile
+  Action: open slot details modal
+
+- Type: `icon button`
+  Label: floating QR scanner button
+  Action: open QR scanner
+  Destination: `/attendant-screen/QRScannerScreen`
+
+Activity history modal:
+
+- Type: `button`
+  Label: close activity modal
+  Action: close modal
+
+- Type: `dropdown`
+  Label: status filter dropdown
+  Action: choose all/start/end
+
+- Type: `form control`
+  Label: search/filter inputs where shown in modal
+  Action: filter activity history
+
+Slot details modal:
+
+- Type: `button`
+  Label: close slot details
+  Action: close modal
+
+- Type: `button`
+  Label: `End Parking`
+  Action: end selected occupied session
+
+- Type: `button`
+  Label: `Cancel Booking`
+  Action: cancel selected reservation
+
+- Type: `button`
+  Label: `Book for Guest`
+  Action: open guest booking modal
+
+Guest booking modal:
+
+- Type: `form control`
+  Label: guest fields
+  Action: enter guest booking details
+
+- Type: `button`
+  Label: submit guest booking
+  Action: create guest booking
+
+- Type: `button`
+  Label: cancel/close guest booking
+  Action: close modal
+
+Attendant settings modal:
+
+- Type: `button`
+  Label: close settings modal
+  Action: close modal
+
+- Type: `button`
+  Label: `Log Out`
+  Action: logout attendant
+  Destination: `/screens/LoginScreen`
+
+- Type: `toggle`
+  Label: notification settings when surfaced
+  Action: update attendant notification preference state
+
+Section settings modal:
+
+- Type: `button`
+  Label: close section settings
+  Action: close modal
+
+- Type: `button`
+  Label: set section unavailable
+  Action: mark section unavailable
+
+- Type: `button`
+  Label: set section available
+  Action: mark section available
+
+3.22 `QRScannerScreen` (Attendant)
+
+Permission state controls:
+
+- Type: `button`
+  Label: `Grant Permission`
+  Action: request camera permission
+
+- Type: `button`
+  Label: `Go Back`
+  Action: return to previous screen
+
+Scanner controls:
+
+- Type: `button`
+  Label: start parking scan button
+  Action: arm scanner in start mode
+
+- Type: `button`
+  Label: end parking scan button
+  Action: arm scanner in end mode
+
+- Type: `button`
+  Label: stop scanning
+  Action: stop active scan session
+
+- Type: `button`
+  Label: close/back
+  Action: return to dashboard
+
+- Type: `camera scan event`
+  Label: QR code read
+  Action:
+  - parse QR
+  - call start session API in start mode
+  - call end session API in end mode
+
+================================================================================
+                        4. GAPS / AMBIGUITIES IN UI
+================================================================================
+
+These exist in code or service flow but are not clearly surfaced as stable screens:
+
+- No dedicated user `My Bookings` screen
+- No user notifications screen
+- No dedicated booking details screen in standard navigation
+- Vehicle update exists at backend level but no clear edit-vehicle UI
+- Some HomeScreen controls are dynamic and depend on data/modals not all visible in one static pass
+- `FeedbackScreen` and `SubscriptionPlansScreen` exist but are not part of the clean primary route flow
+
+================================================================================
+                               5. FILE USE
+================================================================================
+
+Use this file for:
+- UI auditing
+- missing button/screen checks
+- QA checklist drafting
+- preparing full documentation or demo scripts
+
+If needed, the next pass can expand this into:
+- screen-by-screen field inventory
+- modal-by-modal inventory
+- API called by each button
+- line-referenced audit
+
+================================================================================
+                               END OF FILE
+================================================================================
