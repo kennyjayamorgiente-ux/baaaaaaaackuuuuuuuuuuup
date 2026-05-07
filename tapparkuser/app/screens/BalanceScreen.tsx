@@ -97,6 +97,8 @@ const toNumber = (value: any): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const ITEMS_PER_PAGE = 10;
+
 const BalanceScreen: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
@@ -126,6 +128,7 @@ const BalanceScreen: React.FC = () => {
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const contentScrollRef = useRef<ScrollView>(null);
   const textScaleProps = { maxFontSizeMultiplier: 1.15 };
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Profile picture component
   const ProfilePicture = ({ size = 120 }: { size?: number }) => {
@@ -188,7 +191,7 @@ const BalanceScreen: React.FC = () => {
 
       // Load payment history (subscription top-ups)
       console.log('🔄 Loading payment history...');
-      const transactionsResponse = await ApiService.getPaymentHistory(1, 20);
+      const transactionsResponse = await ApiService.getPaymentHistory(1, 500);
       console.log('📊 Transactions response:', transactionsResponse);
       
       if (transactionsResponse.success) {
@@ -214,7 +217,7 @@ const BalanceScreen: React.FC = () => {
 
         // Load parking history and map token deductions to transactions
         console.log('🔄 Loading parking history for token deductions...');
-        const parkingHistoryResponse = await ApiService.getParkingHistory(1, 20);
+        const parkingHistoryResponse = await ApiService.getParkingHistory(1, 500);
         const parkingSessions = parkingHistoryResponse.success ? (parkingHistoryResponse.data.sessions || []) : [];
         console.log('📊 Parking sessions loaded:', parkingSessions.length);
 
@@ -513,11 +516,36 @@ const BalanceScreen: React.FC = () => {
     });
   }, [transactions, mergedTransactions, creditTransactions, debitTransactions, searchQuery, dateFilter, customStartDate, customEndDate, signFilter]);
 
+  const totalTransactionPages = Math.max(1, Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE));
+
+  const paginatedTransactions = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredTransactions, currentPage]);
+
   React.useEffect(() => {
     if (filteredTransactions.length > 0) {
       contentScrollRef.current?.scrollTo({ y: 0, animated: true });
     }
   }, [signFilter]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, dateFilter, customStartDate, customEndDate, signFilter]);
+
+  React.useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalTransactionPages));
+  }, [totalTransactionPages]);
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+    contentScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalTransactionPages, prev + 1));
+    contentScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
 
   const applyCustomDateFilter = () => {
     const start = parseInputDate(customStartDate);
@@ -936,8 +964,9 @@ const BalanceScreen: React.FC = () => {
                 <Text style={balanceScreenStyles.emptyTransactionsSubtext} {...textScaleProps}>Try changing your search or date filter</Text>
               </View>
             ) : (
+              <>
               <View style={viewMode === 'grid' ? balanceScreenStyles.gridListContainer : undefined}>
-              {filteredTransactions.map((transaction, index) => (
+              {paginatedTransactions.map((transaction, index) => (
                 <TouchableOpacity 
                   key={transaction.payment_id || index} 
                   style={[
@@ -982,6 +1011,48 @@ const BalanceScreen: React.FC = () => {
                 </TouchableOpacity>
               ))}
               </View>
+              {filteredTransactions.length > ITEMS_PER_PAGE && (
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: 16,
+                gap: 12,
+              }}>
+                <TouchableOpacity
+                  onPress={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.primary,
+                    paddingVertical: 12,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    opacity: currentPage === 1 ? 0.45 : 1,
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Previous</Text>
+                </TouchableOpacity>
+                <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>
+                  Page {currentPage} of {totalTransactionPages}
+                </Text>
+                <TouchableOpacity
+                  onPress={handleNextPage}
+                  disabled={currentPage >= totalTransactionPages}
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.primary,
+                    paddingVertical: 12,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    opacity: currentPage >= totalTransactionPages ? 0.45 : 1,
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Next</Text>
+                </TouchableOpacity>
+              </View>
+              )}
+              </>
             )}
           </View>
           </ScrollView>

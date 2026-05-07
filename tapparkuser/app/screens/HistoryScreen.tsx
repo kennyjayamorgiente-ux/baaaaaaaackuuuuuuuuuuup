@@ -76,6 +76,8 @@ const formatChargedHours = (decimalHours: number): string => {
   }
 };
 
+const ITEMS_PER_PAGE = 10;
+
 const HistoryScreen: React.FC = () => {
   const router = useRouter();
   const { showLoading, hideLoading } = useLoading();
@@ -113,7 +115,7 @@ const HistoryScreen: React.FC = () => {
   const loadHistory = async () => {
     try {
       setIsLoading(true);
-      const response = await ApiService.getParkingHistory(1, 20);
+      const response = await ApiService.getParkingHistory(1, 500);
       if (response.success) {
         setHistoryData(response.data.sessions);
         setPagination(response.data.pagination);
@@ -687,6 +689,61 @@ const HistoryScreen: React.FC = () => {
     });
   }, [historyData, searchQuery, dateFilter, customStartDate, customEndDate]);
 
+  const totalFilteredPages = Math.max(1, Math.ceil(filteredHistoryData.length / ITEMS_PER_PAGE));
+
+  const paginatedHistoryData = useMemo(() => {
+    const startIndex = (pagination.currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredHistoryData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredHistoryData, pagination.currentPage]);
+
+  useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      currentPage: 1,
+      totalPages: totalFilteredPages,
+      totalItems: filteredHistoryData.length,
+      itemsPerPage: ITEMS_PER_PAGE,
+    }));
+  }, [searchQuery, dateFilter, customStartDate, customEndDate, totalFilteredPages, filteredHistoryData.length]);
+
+  useEffect(() => {
+    setPagination((prev) => {
+      const nextPage = Math.min(prev.currentPage, totalFilteredPages);
+      if (
+        prev.currentPage === nextPage &&
+        prev.totalPages === totalFilteredPages &&
+        prev.totalItems === filteredHistoryData.length &&
+        prev.itemsPerPage === ITEMS_PER_PAGE
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        currentPage: nextPage,
+        totalPages: totalFilteredPages,
+        totalItems: filteredHistoryData.length,
+        itemsPerPage: ITEMS_PER_PAGE,
+      };
+    });
+  }, [totalFilteredPages, filteredHistoryData.length]);
+
+  const handlePreviousPage = () => {
+    setPagination((prev) => ({
+      ...prev,
+      currentPage: Math.max(1, prev.currentPage - 1),
+    }));
+    mainScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleNextPage = () => {
+    setPagination((prev) => ({
+      ...prev,
+      currentPage: Math.min(totalFilteredPages, prev.currentPage + 1),
+    }));
+    mainScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
   const applyCustomDateFilter = () => {
     const start = parseInputDate(customStartDate);
     const end = parseInputDate(customEndDate);
@@ -1007,8 +1064,9 @@ const HistoryScreen: React.FC = () => {
                   <Text style={styles.emptySubtext}>Try changing filters or search keywords</Text>
                 </View>
               ) : (
+                <>
                 <View style={viewMode === 'grid' ? styles.gridListContainer : undefined}>
-                {filteredHistoryData.map((spot, index) => (
+                {paginatedHistoryData.map((spot, index) => (
                   <TouchableOpacity 
                     key={spot.reservation_id} 
                     style={[
@@ -1073,6 +1131,48 @@ const HistoryScreen: React.FC = () => {
                   </TouchableOpacity>
                 ))}
                 </View>
+                {filteredHistoryData.length > ITEMS_PER_PAGE && (
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: 16,
+                  gap: 12,
+                }}>
+                  <TouchableOpacity
+                    onPress={handlePreviousPage}
+                    disabled={pagination.currentPage === 1}
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.primary,
+                      paddingVertical: 12,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      opacity: pagination.currentPage === 1 ? 0.45 : 1,
+                    }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Previous</Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>
+                    Page {pagination.currentPage} of {totalFilteredPages}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleNextPage}
+                    disabled={pagination.currentPage >= totalFilteredPages}
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.primary,
+                      paddingVertical: 12,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      opacity: pagination.currentPage >= totalFilteredPages ? 0.45 : 1,
+                    }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Next</Text>
+                  </TouchableOpacity>
+                </View>
+                )}
+                </>
               )}
             </View>
           </ScrollView>

@@ -2,7 +2,7 @@
                     TAPPARK COMPLETE APPLICATION FLOW DOCUMENT
 ================================================================================
 
-Last repo review date: 2026-04-22
+Last repo review date: 2026-05-08
 Checked codebases:
 - Mobile app: `tapparkuser`
 - Backend API: `tapparkuser-backend`
@@ -13,6 +13,7 @@ Purpose of this document:
 - Indicate what exists only partially
 - Indicate what exists in backend/services but is not clearly exposed in the UI
 - Indicate what is still lacking
+- Clarify that `PARTIAL` means usable but incomplete, inconsistent, duplicated, or not fully surfaced
 
 ================================================================================
                                 STATUS LEGEND
@@ -135,9 +136,11 @@ Purpose of this document:
 - Attendant -> `DashboardScreen`
 - Subscriber/Admin -> `HomeScreen`
 
-[PARTIAL] Login documentation wording
-- Some older docs refer to multiple user types cleanly
-- Current routing is clear, but old docs overstated role branching detail
+[IMPLEMENTED] Login flow documentation intent
+- Current login routing behavior is straightforward in code:
+  - attendant -> attendant dashboard
+  - regular user/admin path -> home
+- Older wording in some notes may still be broader than the actual visible product flow
 
 3.3 SIGNUP FLOW
 
@@ -239,12 +242,14 @@ Purpose of this document:
 2. Sees saved favorite spots
 3. Can remove favorite
 4. Can book again from favorite
+5. Favorites are shown in paged presentation when list length exceeds 10 items
 
 [IMPLEMENTED] History re-use flow
 1. User opens `HistoryScreen`
 2. Sees previous parking sessions
 3. Can book again from history
 4. Can add history spot to favorites
+5. History list supports search, date filtering, list/grid display, and page navigation after 10 records
 
 3.9 BOOKING FLOW
 
@@ -305,6 +310,10 @@ Purpose of this document:
 - Reservation details modal
 - Favorite action
 - Book again action
+- Delete history action
+- Search and date filtering
+- List/grid display mode
+- Previous/next page navigation when results exceed 10 records
 - Empty state handling
 
 [PARTIAL] History completeness
@@ -317,6 +326,9 @@ Purpose of this document:
 - Remaining tokens/hours display
 - Transaction history
 - Transaction detail modal
+- Search and filtering for transaction list
+- List/grid display mode
+- Previous/next page navigation when results exceed 10 records
 - Route to `TopUpScreen`
 
 [IMPLEMENTED] Top-up flow
@@ -339,12 +351,14 @@ Purpose of this document:
 [PARTIAL] Payment flow robustness
 - Flow exists end-to-end in code
 - Some success fallback logic is too forgiving and should be validated carefully in production
+- PayPal flow is operational in app/backend, but still needs stricter real-payment verification and failure-state testing
 
 [PARTIAL] Terminology consistency
 - Code and UI still mix:
   - tokens
   - hours
 - This should be standardized
+- This is a wording/product-language issue rather than a missing feature
 
 3.13 PROFILE FLOW
 
@@ -522,12 +536,15 @@ Purpose of this document:
 
 [IMPLEMENTED]
 - Favorites save/remove/rebook
-- History view/rebook/favorite
+- Favorites paged after 10 items
+- History view/rebook/favorite/delete
+- History filtering and paged presentation
 
 5.6 PAYMENTS AND SUBSCRIPTIONS
 
 [IMPLEMENTED]
 - Balance display
+- Transaction filtering and paged presentation
 - Plan listing
 - PayPal payment flow
 - Balance update after plan purchase
@@ -712,6 +729,14 @@ What is lacking is not the core reservation product. The main gaps are:
 - some documentation and terminology inconsistency
 
 This document should now be used as the complete current flow map and gap list.
+
+Important reading note:
+- `PARTIAL` in this document does not automatically mean the feature is failing.
+- It usually means the feature works but one or more of these are still true:
+  - the UI is split across multiple screens/components
+  - backend support is stronger than the visible product flow
+  - terminology/documentation is inconsistent
+  - the experience is not yet presented as a polished first-class feature
 
 ================================================================================
                              END OF DOCUMENT

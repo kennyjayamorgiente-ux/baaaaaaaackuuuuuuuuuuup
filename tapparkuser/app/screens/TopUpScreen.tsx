@@ -388,50 +388,46 @@ const TopUpScreen: React.FC = () => {
                   </View>
                 </View>
                 
-                <View style={styles.reservationDetailCard}>
-                  <View style={styles.reservationDetailSection}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-                      <TouchableOpacity 
-                        style={[styles.bookNowButton, { 
-                          backgroundColor: '#6B7280',
-                          flex: 1,
-                          marginRight: 8,
-                          paddingHorizontal: 8
-                        }]}
-                        onPress={handleCloseConfirmationModal}
-                      >
-                        <Text style={[
-                          styles.bookNowButtonText, 
-                          { 
-                            fontSize: getAdaptiveFontSize(screenDimensions, 14),
-                            textAlign: 'center'
-                          }
-                        ]}>Cancel</Text>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity 
-                        style={[styles.bookNowButton, { 
-                          flex: 1,
-                          opacity: purchasing ? 0.6 : 1,
-                          paddingHorizontal: 8
-                        }]}
-                        onPress={handleConfirmPurchase}
-                        disabled={purchasing}
-                      >
-                        {purchasing ? (
-                          <ActivityIndicator size="small" color="white" />
-                        ) : (
-                          <Text style={[
-                            styles.bookNowButtonText, 
-                            { 
-                              fontSize: getAdaptiveFontSize(screenDimensions, 14),
-                              textAlign: 'center'
-                            }
-                          ]}>Confirm</Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: 8 }}>
+                  <TouchableOpacity 
+                    style={[styles.bookNowButton, { 
+                      backgroundColor: '#6B7280',
+                      flex: 1,
+                      marginRight: 8,
+                      paddingHorizontal: 8
+                    }]}
+                    onPress={handleCloseConfirmationModal}
+                  >
+                    <Text style={[
+                      styles.bookNowButtonText, 
+                      { 
+                        fontSize: getAdaptiveFontSize(screenDimensions, 14),
+                        textAlign: 'center'
+                      }
+                    ]}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.bookNowButton, { 
+                      flex: 1,
+                      opacity: purchasing ? 0.6 : 1,
+                      paddingHorizontal: 8
+                    }]}
+                    onPress={handleConfirmPurchase}
+                    disabled={purchasing}
+                  >
+                    {purchasing ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Text style={[
+                        styles.bookNowButtonText, 
+                        { 
+                          fontSize: getAdaptiveFontSize(screenDimensions, 14),
+                          textAlign: 'center'
+                        }
+                      ]}>Confirm</Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
               </ScrollView>
             )}

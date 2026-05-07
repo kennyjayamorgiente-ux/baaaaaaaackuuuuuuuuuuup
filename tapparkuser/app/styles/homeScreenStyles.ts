@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Type for theme colors
 type ThemeColors = {
@@ -969,7 +969,10 @@ export const getHomeScreenStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: getResponsiveSize(20),
     marginHorizontal: getResponsiveMargin(20),
-    maxWidth: screenWidth * 0.9,
+    width: screenWidth * 0.9,
+    maxWidth: 420,
+    maxHeight: screenHeight * 0.85,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1010,6 +1013,7 @@ export const getHomeScreenStyles = (colors: ThemeColors) => StyleSheet.create({
   insufficientBalanceModalContent: {
     paddingHorizontal: getResponsivePadding(24),
     paddingBottom: getResponsivePadding(32),
+    flexShrink: 1,
   },
   insufficientBalanceMessageContainer: {
     flexDirection: 'row',
@@ -1044,14 +1048,16 @@ export const getHomeScreenStyles = (colors: ThemeColors) => StyleSheet.create({
     marginLeft: getResponsiveMargin(8),
   },
   insufficientBalanceModalActions: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     paddingHorizontal: getResponsivePadding(24),
     paddingBottom: getResponsivePadding(20),
-    gap: getResponsiveSize(12),
-    marginTop: getResponsiveMargin(8),
+    paddingTop: getResponsivePadding(16),
+    gap: getResponsiveSize(10),
+    marginTop: getResponsiveMargin(4),
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   insufficientBalanceModalCancelButton: {
-    flex: 1,
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: colors.border,
@@ -1068,7 +1074,6 @@ export const getHomeScreenStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textSecondary,
   },
   insufficientBalanceModalPrimaryButton: {
-    flex: 1.5,
     backgroundColor: colors.primary,
     borderRadius: getResponsiveSize(8),
     paddingVertical: getResponsivePadding(10),

@@ -75,6 +75,7 @@ const getResponsiveMargin = (baseMargin: number) => {
   return baseMargin;
 };
 
+const ITEMS_PER_PAGE = 10;
 
 const FavoritesScreen: React.FC = () => {
   const router = useRouter();
@@ -97,6 +98,7 @@ const FavoritesScreen: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const mainScrollRef = useRef<ScrollView>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
 
   // Fetch user vehicles
@@ -125,6 +127,7 @@ const FavoritesScreen: React.FC = () => {
         const response = await ApiService.getFavorites();
         if (response.success) {
           setFavorites(response.data.favorites);
+          setCurrentPage(1);
         } else {
           setFavorites([]);
         }
@@ -147,6 +150,7 @@ const FavoritesScreen: React.FC = () => {
           const response = await ApiService.getFavorites();
           if (response.success) {
             setFavorites(response.data.favorites);
+            setCurrentPage(1);
           }
         } catch (error) {
           console.error('Error refreshing favorites:', error);
@@ -528,6 +532,27 @@ const FavoritesScreen: React.FC = () => {
     },
   });
 
+  const totalFavoritePages = Math.max(1, Math.ceil(favorites.length / ITEMS_PER_PAGE));
+
+  const paginatedFavorites = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return favorites.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [favorites, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalFavoritePages));
+  }, [totalFavoritePages]);
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+    mainScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalFavoritePages, prev + 1));
+    mainScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
   return (
     <View style={favoritesScreenStyles.container}>
       <SharedHeader 
@@ -605,8 +630,9 @@ const FavoritesScreen: React.FC = () => {
                   </Text>
                 </View>
               ) : (
+                <>
                 <View style={viewMode === 'grid' ? favoritesScreenStyles.gridListContainer : undefined}>
-                {favorites.map((favorite, index) => (
+                {paginatedFavorites.map((favorite, index) => (
                 <View
                   key={favorite.favorites_id}
                   style={[
@@ -657,6 +683,48 @@ const FavoritesScreen: React.FC = () => {
                 </View>
                 ))}
                 </View>
+                {favorites.length > ITEMS_PER_PAGE && (
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: 16,
+                  gap: 12,
+                }}>
+                  <TouchableOpacity
+                    onPress={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.primary,
+                      paddingVertical: 12,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      opacity: currentPage === 1 ? 0.45 : 1,
+                    }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Previous</Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>
+                    Page {currentPage} of {totalFavoritePages}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleNextPage}
+                    disabled={currentPage >= totalFavoritePages}
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.primary,
+                      paddingVertical: 12,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      opacity: currentPage >= totalFavoritePages ? 0.45 : 1,
+                    }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Next</Text>
+                  </TouchableOpacity>
+                </View>
+                )}
+                </>
               )}
             </View>
           </ScrollView>
