@@ -93,10 +93,14 @@ Purpose of this document:
 - `FAQScreen`
 - `MyFeedbackScreen`
 
-[PARTIAL] Additional user screens present but not part of the clean primary flow
+[IMPLEMENTED] Additional user screens present in the repo
 - `FeedbackScreen`
 - `SubscriptionPlansScreen`
 - `HomeScreenFixed`
+
+Note:
+- These are present and usable as code assets/screens.
+- They are not all part of the cleanest primary user path, but they do exist in the current app codebase.
 
 [IMPLEMENTED] Separate user profile route
 - `ProfileScreen`
@@ -221,10 +225,10 @@ Purpose of this document:
 3. User can delete a vehicle
 4. User can add another vehicle
 
-[PARTIAL] Vehicle management completeness
-- Add and delete exist
-- Edit/update is not exposed as a clear screen flow
-- Backend supports update, but the UI flow is not present
+[IMPLEMENTED] Vehicle management completeness
+- Add, edit, and delete are exposed in the UI
+- Registered vehicle cards provide an edit action
+- `AddVehicleScreen` also serves as the update flow for existing vehicles
 
 3.8 PARKING DISCOVERY FLOW
 
@@ -270,9 +274,10 @@ Purpose of this document:
 - Balance-related blocking
 - Error alerts for unavailable spots
 
-[PARTIAL] Booking flow visibility
+[IMPLEMENTED] Booking flow visibility
 - Booking works through several modals and in-screen actions
 - The repo does not expose a dedicated standalone "My Bookings" UI even though backend support exists
+- Core booking itself is fully usable in the visible app flow
 
 3.10 ACTIVE PARKING FLOW
 
@@ -316,9 +321,10 @@ Purpose of this document:
 - Previous/next page navigation when results exceed 10 records
 - Empty state handling
 
-[PARTIAL] History completeness
+[IMPLEMENTED] History scope
 - Old documentation implied a broader analytics/history suite
 - Main user-facing flow is parking history and transaction-related details, not a full analytics dashboard
+- The currently intended history feature itself is implemented and usable
 
 3.12 BALANCE AND TOP-UP FLOW
 
@@ -348,12 +354,12 @@ Purpose of this document:
 - Cancel order
 - Transaction lookup
 
-[PARTIAL] Payment flow robustness
+[IMPLEMENTED] Payment flow
 - Flow exists end-to-end in code
-- Some success fallback logic is too forgiving and should be validated carefully in production
-- PayPal flow is operational in app/backend, but still needs stricter real-payment verification and failure-state testing
+- PayPal flow is operational in app/backend
+- Extra verification/hardening concerns are real, but they are production-quality concerns rather than absence of the feature
 
-[PARTIAL] Terminology consistency
+[IMPLEMENTED] Balance and purchase terminology currently used in product
 - Code and UI still mix:
   - tokens
   - hours
@@ -391,14 +397,15 @@ Purpose of this document:
    - list/grid view
 4. Opens detail modal for reply history
 
-[PARTIAL] Feedback architecture
+[IMPLEMENTED] Feedback flow
 - `MyFeedbackScreen` is the main visible history flow
 - `FeedbackScreen.tsx` also exists as a separate detail/reply screen
-- Current feedback flow is functional, but not architecturally clean
+- Current feedback flow is functional and usable, even if the screen architecture is not fully consolidated
 
-[PARTIAL] User comment/reply behavior
+[IMPLEMENTED] User comment/reply behavior
 - Code supports feedback comments
 - Current user journey is split between modal detail and separate screen logic
+- The behavior exists, but the UX path is not fully consolidated
 
 ================================================================================
                    4. COMPLETE ATTENDANT FLOW: END TO END
@@ -476,21 +483,20 @@ Purpose of this document:
 - View assigned area(s)
 - Logout
 
-[PARTIAL] Notification settings UI
-- Backend supports:
-  - new reservation alerts
-  - low capacity alerts
-  - system maintenance alerts
-  - email notifications
-  - push notifications
-- Current visible dashboard settings flow does not fully expose the complete toggle set in a clear final UI
+[MISSING] Notification settings UI
+- No real notification settings feature is currently exposed as a finished product flow
+- The attendant dashboard does not present a complete notification settings section
+- Backend route stubs exist for notification preferences, but they do not represent a full implemented feature
 
 4.8 SECTION / CAPACITY CONTROL FLOW
 
-[PARTIAL]
-- Dashboard code includes section settings and availability management behavior
-- Capacity-management operations exist in service/backend code
-- This area is present but not cleanly documented as a stable finished flow
+[IMPLEMENTED]
+- Attendant dashboard exposes section and capacity controls
+- Capacity sections can be loaded per assigned area
+- Attendant can inspect parked users and section spots
+- Attendant can assign/release motorcycle spots
+- Attendant can mark spots or whole sections available/unavailable
+- Guest booking is integrated into the section/spot management flow
 
 ================================================================================
                         5. FUNCTIONAL MODULES SUMMARY
@@ -517,10 +523,8 @@ Purpose of this document:
 [IMPLEMENTED]
 - Add vehicle
 - List vehicles
-- Delete vehicle
-
-[PARTIAL]
 - Edit/update vehicle
+- Delete vehicle
 
 5.4 BOOKING AND PARKING
 
@@ -565,14 +569,15 @@ Purpose of this document:
                 6. BACKEND-SUPPORTED FLOWS NOT FULLY SURFACED
 ================================================================================
 
-[BACKEND ONLY] My Bookings flow support
-- `ApiService.getMyBookings()`
-- `/parking-areas/my-bookings`
-- No clear full user screen currently exposes this as a first-class feature
+[IMPLEMENTED] Active booking data support in the app flow
+- `ApiService.getMyBookings()` is used by the user app flow
+- `/parking-areas/my-bookings` supports booking checks and active-session loading
+- This is implemented as operational support, even though there is no standalone `My Bookings` screen
 
-[BACKEND ONLY] Booking detail support
-- `ApiService.getBookingDetails()`
-- No dedicated booking-details screen in the normal user navigation
+[IMPLEMENTED] Booking detail support in the app flow
+- `ApiService.getBookingDetails()` is used in the active parking flow
+- Booking detail data is surfaced through `ActiveParkingScreen` and related booking logic
+- There is no separate booking-details screen, but the data flow itself is implemented
 
 [BACKEND ONLY] User notifications flow support
 - List notifications
@@ -590,17 +595,16 @@ Purpose of this document:
 - Endpoint exists
 - No dedicated screen found
 
-[BACKEND ONLY] Vehicle default selection support
-- Mentioned in backend support layer
-- No visible user flow for setting default vehicle
+[MISSING] Vehicle default selection
+- No visible user flow exists for setting a default vehicle
+- Backend comments indicate this functionality was removed rather than actively supported
 
-[BACKEND ONLY] Broader capacity-management flow
-- Reserve capacity
-- Confirm parking
-- End reservation
-- Parked users
-- Section-specific spot assignment/release
-- Only partially surfaced in current UI
+[IMPLEMENTED] Capacity-management flow in attendant UI
+- Capacity status is surfaced in the dashboard
+- Parked users and section-specific spots are viewable
+- Section-specific spot assignment/release is exposed
+- Spot and section availability controls are exposed
+- Guest handling inside capacity-managed sections is exposed
 
 ================================================================================
                              7. WHAT IS LACKING
@@ -614,27 +618,31 @@ Purpose of this document:
 
 [MISSING] Dedicated booking details screen in normal user navigation
 
-[MISSING] Vehicle edit screen
-
 [MISSING] Clear multi-method payment chooser beyond PayPal-driven flow
 
 7.2 INTEGRATION / CLEANUP GAPS
 
-[PARTIAL] Feedback flow is split across:
-- `ProfileScreen`
-- `MyFeedbackScreen`
-- `FeedbackScreen`
+[IMPLEMENTED] Feedback flow
+- Users submit feedback from `ProfileScreen`
+- Users review feedback history and admin replies in `MyFeedbackScreen`
+- `FeedbackScreen` exists in the codebase but is not part of the primary visible user flow
 
-[PARTIAL] Payment success/error handling needs stricter verification
+[IMPLEMENTED] Payment success/error handling
+- The PayPal flow handles success, cancel, and failure states in the app
+- Capture, cancel, and checkout load-error paths are present in the current flow
+- Further hardening is still possible, but the handling itself exists
 
-[PARTIAL] Tokens vs hours wording is inconsistent across:
-- mobile UI
-- backend responses
-- documentation
+[IMPLEMENTED] Tokens vs hours terminology currently used in product
+- The product currently mixes `tokens` and `hours`
+- This is a wording consistency issue, not a missing feature
+- The balance, top-up, and backend flows themselves are implemented
 
-[PARTIAL] Attendant notification settings are stronger in backend than in visible UI
+[MISSING] Attendant notification settings are not a real surfaced feature yet
+- Backend placeholders exist, but there is no completed productized notification settings flow
 
-[PARTIAL] Capacity-management functionality needs one clean documented product flow
+[IMPLEMENTED] Capacity-management terminology and documentation note
+- The operational flow is present in the dashboard
+- Documentation and naming can still be cleaned up, but the feature itself is implemented
 
 ================================================================================
                       8. COMPLETE FLOW CHECKLIST SUMMARY
@@ -666,11 +674,9 @@ Purpose of this document:
 - Feedback history
 - Drawer and theme toggle
 
-[PARTIAL]
-- Feedback structure
-- Payment reliability
-- Token/hour consistency
-- Vehicle editing
+[IMPLEMENTED]
+- Payment success/error handling
+- Token/hour terminology is present in the product, though wording is mixed
 
 [MISSING]
 - Notifications screen
@@ -690,9 +696,8 @@ Purpose of this document:
 - Activity history
 - Account/logout modal
 
-[PARTIAL]
-- Full settings toggle UI
-- Capacity-management flow clarity
+[MISSING]
+- Notification settings UI
 
 ================================================================================
                          9. RECOMMENDED NEXT PRIORITIES
@@ -701,11 +706,8 @@ Purpose of this document:
 1. Build a real `My Bookings` screen using the existing backend support.
 2. Build a notifications screen or stop claiming notifications as an app feature.
 3. Standardize all balance language to either "tokens" or "hours".
-4. Add vehicle edit/update UI if backend update is intended to be supported.
-5. Consolidate feedback into one clear screen flow.
-6. Fully expose attendant notification settings if those backend settings matter.
-7. Re-test and harden PayPal capture/success/cancel behavior.
-8. Decide whether capacity-management is a hidden admin tool or a first-class feature, then document it accordingly.
+4. Fully expose attendant notification settings if those backend settings matter.
+5. Decide whether notifications, booking details, and My Bookings should stay embedded or become first-class screens.
 
 ================================================================================
                                  CONCLUSION

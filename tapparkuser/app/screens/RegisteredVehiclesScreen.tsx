@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import SharedHeader from '../../components/SharedHeader';
 import { getRegisteredVehiclesScreenStyles } from '../styles/registeredVehiclesScreenStyles';
 import { useThemeColors, useTheme } from '../../contexts/ThemeContext';
@@ -28,6 +29,7 @@ import {
   darkCarIconSvg,
   darkMotorIconSvg,
   darkEbikeIconSvg,
+  darkUsersEditIconSvg,
   darkBinIconSvg,
   darkNewCarIconSvg
 } from '../assets/icons/index2';
@@ -181,6 +183,14 @@ const RegisteredVehiclesScreen: React.FC = () => {
     fetchVehicles();
   }, [isAuthenticated]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        fetchVehicles();
+      }
+    }, [isAuthenticated])
+  );
+
   // Group vehicles by type
   const groupedVehicles = {
     car: vehicles.filter(v => v.vehicle_type.toLowerCase() === 'car'),
@@ -250,6 +260,20 @@ const RegisteredVehiclesScreen: React.FC = () => {
 
   const handleAddVehicle = () => {
     router.push('/screens/AddVehicleScreen');
+  };
+
+  const handleEditVehicle = (vehicle: any) => {
+    router.push({
+      pathname: '/screens/AddVehicleScreen',
+      params: {
+        vehicleId: String(vehicle.id),
+        vehicleType: vehicle.vehicle_type || '',
+        plateNumber: vehicle.plate_number || '',
+        brand: vehicle.brand || '',
+        model: vehicle.model || '',
+        color: vehicle.color || '',
+      },
+    });
   };
 
   const handleScroll = (event: any, scrollProgress: Animated.Value) => {
@@ -365,6 +389,16 @@ const RegisteredVehiclesScreen: React.FC = () => {
                       />
                     </View>
                     <TouchableOpacity
+                      style={[registeredVehiclesScreenStyles.deleteButton, { right: getResponsivePadding(46) }]}
+                      onPress={() => handleEditVehicle(vehicle)}
+                    >
+                      <SvgXml
+                        xml={isDarkMode ? darkUsersEditIconSvg : maroonUsersEditIconSvg}
+                        width={20}
+                        height={20}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={registeredVehiclesScreenStyles.deleteButton}
                       onPress={() => handleDeleteVehicle(vehicle, 'Car')}
                     >
@@ -455,6 +489,16 @@ const RegisteredVehiclesScreen: React.FC = () => {
                       />
                     </View>
                     <TouchableOpacity
+                      style={[registeredVehiclesScreenStyles.deleteButton, { right: getResponsivePadding(46) }]}
+                      onPress={() => handleEditVehicle(vehicle)}
+                    >
+                      <SvgXml
+                        xml={isDarkMode ? darkUsersEditIconSvg : maroonUsersEditIconSvg}
+                        width={20}
+                        height={20}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={registeredVehiclesScreenStyles.deleteButton}
                       onPress={() => handleDeleteVehicle(vehicle, 'Motorcycle')}
                     >
@@ -544,6 +588,16 @@ const RegisteredVehiclesScreen: React.FC = () => {
                         height={20}
                       />
                     </View>
+                    <TouchableOpacity
+                      style={[registeredVehiclesScreenStyles.deleteButton, { right: getResponsivePadding(46) }]}
+                      onPress={() => handleEditVehicle(vehicle)}
+                    >
+                      <SvgXml
+                        xml={isDarkMode ? darkUsersEditIconSvg : maroonUsersEditIconSvg}
+                        width={20}
+                        height={20}
+                      />
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={registeredVehiclesScreenStyles.deleteButton}
                       onPress={() => handleDeleteVehicle(vehicle, 'E-bike')}

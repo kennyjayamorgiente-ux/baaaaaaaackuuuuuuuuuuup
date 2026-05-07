@@ -16,7 +16,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -101,6 +101,7 @@ const VEHICLE_TYPES = [
 ];
 
 export default function AddVehicleScreen() {
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const [vehicleType, setVehicleType] = useState('');
@@ -127,6 +128,22 @@ export default function AddVehicleScreen() {
   const vehicleColorRef = useRef<TextInput>(null);
   const vehicleBrandRef = useRef<TextInput>(null);
   const vehicleModelRef = useRef<TextInput>(null);
+
+  const getParamString = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] || '' : value || '';
+
+  const vehicleId = getParamString(params.vehicleId);
+  const isEditMode = Boolean(vehicleId);
+
+  React.useEffect(() => {
+    if (!isEditMode) return;
+
+    setVehicleType(getParamString(params.vehicleType));
+    setVehicleColor(getParamString(params.color));
+    setPlateNumber(getParamString(params.plateNumber));
+    setVehicleBrand(getParamString(params.brand));
+    setVehicleModel(getParamString(params.model));
+  }, [isEditMode, params.vehicleId, params.vehicleType, params.color, params.plateNumber, params.brand, params.model]);
 
   React.useEffect(() => {
     const pulse = Animated.loop(
@@ -236,25 +253,33 @@ export default function AddVehicleScreen() {
         color: vehicleColor.trim() || undefined,
       };
 
-      const response = await ApiService.addVehicle(vehicleData);
+      const response = isEditMode
+        ? await ApiService.updateVehicle(Number(vehicleId), vehicleData)
+        : await ApiService.addVehicle(vehicleData);
       
       if (response.success) {
         Alert.alert(
           'Success', 
-          'Vehicle added successfully!',
+          isEditMode ? 'Vehicle updated successfully!' : 'Vehicle added successfully!',
           [
             {
               text: 'OK',
-              onPress: () => router.push('/screens/HomeScreen')
+              onPress: () => {
+                if (isEditMode) {
+                  router.back();
+                } else {
+                  router.push('/screens/HomeScreen');
+                }
+              }
             }
           ]
         );
       } else {
-        Alert.alert('Error', response.message || 'Failed to add vehicle');
+        Alert.alert('Error', response.message || (isEditMode ? 'Failed to update vehicle' : 'Failed to add vehicle'));
       }
     } catch (error) {
-      console.error('Add vehicle error:', error);
-      Alert.alert('Error', 'Failed to add vehicle. Please try again.');
+      console.error(isEditMode ? 'Update vehicle error:' : 'Add vehicle error:', error);
+      Alert.alert('Error', isEditMode ? 'Failed to update vehicle. Please try again.' : 'Failed to add vehicle. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -280,7 +305,7 @@ export default function AddVehicleScreen() {
 
   return (
     <View style={[addVehicleScreenStyles.container, { backgroundColor: colors.background }]}>
-      <SharedHeader title="Add Vehicle" />
+      <SharedHeader title={isEditMode ? "Edit Vehicle" : "Add Vehicle"} />
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
@@ -321,7 +346,7 @@ export default function AddVehicleScreen() {
           {/* Middle Section - Text */}
           <View style={addVehicleScreenStyles.middleSection}>
             <Text style={[addVehicleScreenStyles.welcomeText, { color: colors.text }]}>
-              ADD YOUR VEHICLE
+              {isEditMode ? 'UPDATE YOUR VEHICLE' : 'ADD YOUR VEHICLE'}
             </Text>
           </View>
 
@@ -537,7 +562,7 @@ export default function AddVehicleScreen() {
                 {isLoading ? (
                   <ActivityIndicator color={colors.textInverse} size="small" />
                 ) : (
-                  <Text style={addVehicleScreenStyles.addButtonText}>+ Add</Text>
+                  <Text style={addVehicleScreenStyles.addButtonText}>{isEditMode ? 'Save' : '+ Add'}</Text>
                 )}
               </TouchableOpacity>
             </View>

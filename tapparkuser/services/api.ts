@@ -932,6 +932,41 @@ export class ApiService {
     return result;
   }
 
+  static async updateVehicle(vehicleId: number, vehicleData: {
+    plateNumber: string;
+    vehicleType: string;
+    brand?: string;
+    model?: string;
+    color?: string;
+    isDefault?: boolean;
+  }) {
+    const result = await this.request<{
+      success: boolean;
+      message: string;
+      data: {
+        vehicle: {
+          id: number;
+          plate_number: string;
+          vehicle_type: string;
+          brand?: string;
+          model?: string;
+          color?: string;
+          is_default: boolean;
+          created_at: string;
+        };
+      };
+    }>(`/vehicles/${vehicleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(vehicleData),
+    });
+
+    if (result.success) {
+      this.invalidateVehicleCache();
+    }
+
+    return result;
+  }
+
   static async deleteVehicle(vehicleId: number) {
     const result = await this.request<{
       success: boolean;
