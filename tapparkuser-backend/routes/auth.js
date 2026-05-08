@@ -9,6 +9,7 @@ const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { logUserActivity, ActionTypes } = require('../utils/userLogger');
 const { resolveEffectiveUserTokens } = require('../utils/subscriptionTokens');
+const { tapparkClient } = require('../tappark');
 
 const router = express.Router();
 
@@ -88,6 +89,67 @@ const normalizeIdentifier = (value) =>
     .trim()
     .replace(/[^a-zA-Z0-9]/g, '');
 
+const pickFirstString = (...values) => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const unwrapPayload = (payload) => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data;
+  }
+  return payload;
+};
+
+const findPersonRecord = (value) => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findPersonRecord(item);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  const directSignals = [
+    value.first_name,
+    value.last_name,
+    value.firstname,
+    value.lastname,
+    value.firstName,
+    value.lastName,
+    value.student_id,
+    value.id_number,
+    value.email,
+    value.school_email,
+    value.full_name,
+    value.name
+  ];
+  if (directSignals.some(Boolean)) {
+    return value;
+  }
+
+  for (const key of ['student', 'person', 'profile', 'record', 'result', 'data']) {
+    if (key in value) {
+      const found = findPersonRecord(value[key]);
+      if (found) return found;
+    }
+  }
+
+  for (const nested of Object.values(value)) {
+    const found = findPersonRecord(nested);
+    if (found) return found;
+  }
+
+  return value;
+};
+
 // Register new user
 router.post('/register', registerValidation, async (req, res) => {
   try {
@@ -142,6 +204,42 @@ router.post('/register', registerValidation, async (req, res) => {
     }
 
     if (hasAnyExternalIdentity) {
+      if (
+        normalizedExternalSource === 'foundationu_mis' &&
+        (normalizedExternalType === 'student' || normalizedExternalType === 'employee')
+      ) {
+        try {
+          if (normalizedExternalType === 'student') {
+            await tapparkClient.loginStudent(normalizedExternalId, password);
+          } else {
+            await tapparkClient.loginEmployee(normalizedExternalId, password);
+          }
+        } catch (tapparkError) {
+          const status = tapparkError?.response?.status || 401;
+          const remoteMessage =
+            tapparkError?.response?.data?.message ||
+            tapparkError?.response?.data?.error ||
+            'School ID/password verification failed';
+
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[Auth register] MIS credential verification failed:', {
+              externalId: normalizedExternalId,
+              externalType: normalizedExternalType,
+              status,
+              message: remoteMessage
+            });
+          }
+
+          return res.status(status === 404 ? 401 : status).json({
+            success: false,
+            message:
+              status === 404
+                ? 'Invalid school ID or password'
+                : remoteMessage
+          });
+        }
+      }
+
       const existingExternalUser = await db.query(
         `SELECT user_id
          FROM users
@@ -267,11 +365,45 @@ router.post('/login', loginValidation, async (req, res) => {
       });
     }
 
-    // Find user with type information
+    // Always verify kiosk credentials via MIS student-login first.
+    try {
+      // MIS may require the original ID formatting (e.g. with dashes), so try raw first.
+      const loginIdentifiers = rawIdentifier !== identifier
+        ? [rawIdentifier, identifier]
+        : [rawIdentifier];
+
+      let misVerified = false;
+      for (const loginIdentifier of loginIdentifiers) {
+        try {
+          await tapparkClient.loginStudent(loginIdentifier, password);
+          misVerified = true;
+          break;
+        } catch (_attemptError) {
+          // Try next identifier format.
+        }
+      }
+
+      if (!misVerified) {
+        throw new Error('MIS credential verification failed');
+      }
+    } catch (_misError) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Auth login] MIS student-login failed:', {
+          rawIdentifier,
+          normalizedIdentifier: identifier
+        });
+      }
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid ID number or password'
+      });
+    }
+
+    // Credentials are valid in MIS; now resolve local user profile.
     // Check if user has accepted terms by checking if they have a TERMS_ACCEPTED log entry
     const users = await db.query(`
       SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture,
-             u.external_user_id,
+             u.external_user_id, u.external_source, u.external_type,
              t.account_type_name,
              CASE 
                WHEN EXISTS (
@@ -283,40 +415,95 @@ router.post('/login', loginValidation, async (req, res) => {
              END as terms_accepted
       FROM users u
       LEFT JOIN types t ON u.user_type_id = t.type_id
-      WHERE REPLACE(REPLACE(COALESCE(u.external_user_id, ''), '-', ''), ' ', '') = ?
-         OR LOWER(u.email) = LOWER(?)
-    `, [identifier, rawIdentifier]);
+      WHERE u.external_source = 'foundationu_mis'
+        AND u.external_type = 'student'
+        AND REPLACE(REPLACE(COALESCE(u.external_user_id, ''), '-', ''), ' ', '') = ?
+      LIMIT 1
+    `, [identifier]);
 
-    if (users.length === 0) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[Auth login] no user found for identifier:', {
-          rawIdentifier,
-          normalizedIdentifier: identifier
-        });
+    let user = users[0];
+
+    if (!user) {
+      let firstName = 'Student';
+      let lastName = identifier;
+      let email = `${identifier}@foundationu-mis.local`;
+
+      try {
+        const studentPayload = await tapparkClient.getStudent(rawIdentifier || identifier);
+        const source = unwrapPayload(studentPayload);
+        const person = findPersonRecord(source) || {};
+        const fullName = pickFirstString(person.full_name, person.fullname, person.name);
+        const nameParts = fullName ? fullName.split(/\s+/).filter(Boolean) : [];
+
+        firstName = pickFirstString(
+          person.first_name,
+          person.firstname,
+          person.firstName,
+          nameParts[0],
+          firstName
+        );
+        lastName = pickFirstString(
+          person.last_name,
+          person.lastname,
+          person.lastName,
+          nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
+          lastName
+        );
+        email = pickFirstString(
+          person.email,
+          person.email_address,
+          person.school_email,
+          person.emailAddress,
+          email
+        );
+      } catch (_profileError) {
+        // Use fallback values when profile lookup fails; credential verification already passed.
       }
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid ID number or password'
-      });
+
+      const refreshedHash = await bcrypt.hash(password, 12);
+      const createResult = await db.query(
+        `INSERT INTO users (
+          email,
+          password,
+          first_name,
+          last_name,
+          user_type_id,
+          tokens,
+          external_user_id,
+          external_source,
+          external_type,
+          external_last_synced_at
+        ) VALUES (?, ?, ?, ?, 1, 0, ?, 'foundationu_mis', 'student', ?)`,
+        [email, refreshedHash, firstName, lastName, identifier, new Date()]
+      );
+
+      const createdUserRows = await db.query(`
+        SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture,
+               u.external_user_id, u.external_source, u.external_type,
+               t.account_type_name,
+               CASE 
+                 WHEN EXISTS (
+                   SELECT 1 FROM user_logs 
+                   WHERE user_id = u.user_id 
+                   AND action_type = 'TERMS_ACCEPTED'
+                 ) THEN 1
+                 ELSE 0
+               END as terms_accepted
+        FROM users u
+        LEFT JOIN types t ON u.user_type_id = t.type_id
+        WHERE u.user_id = ?
+        LIMIT 1
+      `, [createResult.insertId]);
+
+      user = createdUserRows[0];
     }
 
-    const user = users[0];
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[Auth login] password mismatch:', {
-          userId: user.user_id,
-          rawIdentifier,
-          normalizedIdentifier: identifier
-        });
-      }
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid ID number or password'
-      });
-    }
+    // Optional local sync for debugging/backup; auth source remains MIS.
+    const refreshedHash = await bcrypt.hash(password, 12);
+    await db.query(
+      'UPDATE users SET password = ?, external_last_synced_at = ? WHERE user_id = ?',
+      [refreshedHash, new Date(), user.user_id]
+    );
 
     // Generate JWT token
     const token = jwt.sign(
