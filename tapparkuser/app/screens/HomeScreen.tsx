@@ -948,6 +948,16 @@ export default function HomeScreen() {
     setIsVehicleSelectionModalVisible(true);
   };
 
+  const transitionFrequentSpotToBookingFlow = () => {
+    setCurrentBookingStep(0);
+    setIsFrequentSpotsModalVisible(false);
+
+    // Let the frequent spots modal dismiss before presenting the next modal.
+    setTimeout(() => {
+      setIsVehicleSelectionModalVisible(true);
+    }, 200);
+  };
+
   const handleBookFrequentSpot = async (spot: any) => {
     console.log('🎯 handleBookFrequentSpot called with spot:', spot);
     
@@ -998,8 +1008,8 @@ export default function HomeScreen() {
           isCapacitySection: true
         });
         
-        // Show vehicle selection modal for capacity booking
-        setIsVehicleSelectionModalVisible(true);
+        // Close the source modal first, then continue with the booking flow.
+        transitionFrequentSpotToBookingFlow();
         return;
       } catch (error) {
         hideLoading();
@@ -1057,9 +1067,9 @@ export default function HomeScreen() {
       }
       
       // Show vehicle selection modal directly (even if area not found, we can still show vehicles)
-      console.log('🚀 Setting isVehicleSelectionModalVisible to true');
-      setIsVehicleSelectionModalVisible(true);
-      console.log('✅ Modal should now be visible');
+      console.log('🚀 Transitioning frequent spot selection into booking flow');
+      transitionFrequentSpotToBookingFlow();
+      console.log('✅ Booking flow transition started');
     } catch (error) {
       console.error('Error in handleBookFrequentSpot:', error);
       Alert.alert('Error', 'Failed to load parking areas');
@@ -3776,13 +3786,6 @@ export default function HomeScreen() {
                 <Ionicons name="close" size={24} color={colors.primary} />
               </TouchableOpacity>
             </View>
-            
-            {/* Step Flow Indicator */}
-            <StepFlowIndicator 
-              currentStep={0}
-              totalSteps={3}
-              stepLabels={bookingSteps}
-            />
             
             <View style={homeScreenStyles.vehicleTypeInfoContainer}>
               <Text style={homeScreenStyles.vehicleTypeInfoText}>

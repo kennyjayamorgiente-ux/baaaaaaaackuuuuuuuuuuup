@@ -2,7 +2,7 @@
                   TAPPARK UI SCREEN AND CONTROL INVENTORY
 ================================================================================
 
-Generated from static code inspection on 2026-04-22
+Generated from static code inspection on 2026-05-08
 Source checked:
 - `tapparkuser`
 - `tapparkuser-backend` only when needed for destination/logic notes
@@ -10,6 +10,7 @@ Source checked:
 Purpose:
 - Inventory screens and interactive UI controls
 - List what each button/control does
+- Reflect current code-level UI behavior after recent system changes
 - Keep `TAPPARK_APP_FUNCTIONALITY.txt` unchanged
 
 Important note:
@@ -22,6 +23,8 @@ Important note:
 ================================================================================
 
 Type:
+- `screen`
+- `automatic route action`
 - `button`
 - `toggle`
 - `link`
@@ -30,7 +33,16 @@ Type:
 - `modal action`
 - `list item`
 - `form control`
+- `search`
+- `filter`
+- `filter option`
+- `dropdown`
+- `dropdown option`
+- `tab control`
+- `calendar day`
 - `overlay spot`
+- `webview navigation`
+- `camera scan event`
 
 Destination:
 - route pushed/replaced when applicable
@@ -95,11 +107,24 @@ Destination:
   Action: close drawer
   Destination: drawer closed
 
+1.3 `TermsModal`
+
+- Type: `button`
+  Label: accept terms action
+  Action: accept terms from modal gate
+  Destination: backend accept-terms flow, modal closes
+
+1.4 `ExpirationModal`
+
+- Type: `modal action`
+  Label: dismiss / acknowledge expiration modal
+  Action: close expiration notice and continue flow depending on state
+
 ================================================================================
                           2. ROUTE / SCREEN LIST
 ================================================================================
 
-User-facing screens found:
+Primary user-facing screens found:
 - `Splash1Screen`
 - `GreetingsScreen`
 - `LoginScreen`
@@ -117,9 +142,13 @@ User-facing screens found:
 - `TermsAndConditionsScreen`
 - `FAQScreen`
 - `MyFeedbackScreen`
+- `ProfileScreen`
+
+Additional user-facing code assets/screens found:
 - `FeedbackScreen`
 - `SubscriptionPlansScreen`
-- `ProfileScreen`
+- `HomeScreenFixed`
+- `modal`
 
 Attendant-facing screens found:
 - `DashboardScreen`
@@ -131,10 +160,10 @@ Attendant-facing screens found:
 
 3.1 `Splash1Screen`
 
-- Type: screen
+- Type: `screen`
   Purpose: loading/auth gate
 
-- Type: automatic route action
+- Type: `automatic route action`
   Label: auth redirect
   Action: redirects after auth check
   Destination: login, home, or attendant dashboard depending on auth state
@@ -244,12 +273,13 @@ Core recurring controls on Home:
 - Type: `card`
   Label: frequent spot card
   Action: inspect/rebook frequent spot
-  Destination: booking flow
+  Destination: quick-book vehicle-selection modal
 
 - Type: `button`
   Label: `BOOK` on frequent spot card
   Action: book selected frequent spot
-  Destination: booking flow -> `/screens/ActiveParkingScreen` on success
+  Destination: quick-book vehicle-selection modal -> `Book Now` -> `/screens/ActiveParkingScreen` on success
+  Note: modal currently shows the shared 3-step visual indicator
 
 - Type: `card`
   Label: parking area card
@@ -272,12 +302,8 @@ Core recurring controls on Home:
 - Type: `button`
   Label: `BOOK` inside frequent spots modal
   Action: book chosen frequent spot
-  Destination: booking flow -> `/screens/ActiveParkingScreen` on success
-
-- Type: `button`
-  Label: terms modal accept action
-  Action: accept terms
-  Destination: backend accept-terms flow, modal closes
+  Destination: quick-book vehicle-selection modal -> `Book Now` -> `/screens/ActiveParkingScreen` on success
+  Note: modal currently shows the shared 3-step visual indicator
 
 - Type: `button`
   Label: insufficient balance `Maybe Later`
@@ -296,14 +322,14 @@ Dynamic Home controls:
   Destination: spot details/modal
 
 - Type: `modal action`
-  Label: booking confirmation actions
-  Action: confirm/cancel booking
+  Label: Home parking-area booking modal actions
+  Action: confirm/cancel booking from the assigned-slot booking modal
   Destination: booking request or modal close
 
 - Type: `modal action`
-  Label: vehicle selection actions
-  Action: choose vehicle for booking
-  Destination: booking request
+  Label: quick-book vehicle selection actions
+  Action: choose vehicle for frequent-used quick booking
+  Destination: enables `Book Now` submission
 
 3.7 `ActiveParkingScreen`
 
@@ -331,11 +357,11 @@ Persistent controls:
   Action: show timer/details view
 
 - Type: `button`
-  Label: add to favorites
-  Action: save current spot as favorite
+  Label: `Add to Favorites`
+  Action: save current spot/section as favorite
 
 - Type: `button`
-  Label: refresh layout
+  Label: `Refresh`
   Action: reload layout/spot state
 
 - Type: `overlay spot`
@@ -355,7 +381,7 @@ Modal controls:
   Destination: `/screens/HomeScreen`
 
 - Type: `modal action`
-  Label: grace-period warning close
+  Label: grace-period warning close / acknowledge
   Action: dismiss warning modal
 
 3.8 `FavoritesScreen`
@@ -364,39 +390,69 @@ Modal controls:
   Label: header menu/back via SharedHeader
   Action: standard header action
 
+- Type: `toggle`
+  Label: `List`
+  Action: set list view
+
+- Type: `toggle`
+  Label: `Grid`
+  Action: set grid view
+
 - Type: `list item`
   Label: favorite parking card
-  Action: inspect favorite item
+  Action: inspect visible favorite item
 
 - Type: `button`
-  Label: remove favorite
+  Label: `BOOK` / `BOOK NOW`
+  Action: rebook selected favorite
+  Destination: vehicle selection -> `/screens/ActiveParkingScreen` on success
+
+- Type: `button`
+  Label: remove favorite button
   Action: remove saved favorite
   Destination: refresh favorites list
 
 - Type: `button`
-  Label: `BOOK`
-  Action: rebook selected favorite
+  Label: pagination `Previous`
+  Action: move to previous favorites page
+
+- Type: `button`
+  Label: pagination `Next`
+  Action: move to next favorites page
+
+- Type: `button`
+  Label: scroll-to-top floating button
+  Action: scroll list to top
+
+Vehicle selection modal:
+
+- Type: `tab control`
+  Label: shared 3-step visual indicator
+  Action: visual progress display for quick-book modal
+  Destination: informational only; actual user action remains select vehicle then `Book Now`
+
+- Type: `button`
+  Label: close vehicle selection modal
+  Action: close modal
+
+- Type: `list item`
+  Label: vehicle option card
+  Action: select vehicle
+
+- Type: `button`
+  Label: `Book Now`
+  Action: confirm favorite rebooking
   Destination: `/screens/ActiveParkingScreen` on success
 
-- Type: `toggle`
-  Label: list/grid switch
-  Action: change favorites list presentation
+Mismatch modal:
 
-- Type: `search`
-  Label: search field
-  Action: filter favorites
+- Type: `button`
+  Label: close mismatch modal
+  Action: close modal
 
-- Type: `filter`
-  Label: date/status filters where present in screen state
-  Action: refine visible list
-
-- Type: `modal action`
-  Label: vehicle selection modal choose vehicle
-  Action: select vehicle for booking
-
-- Type: `modal action`
-  Label: vehicle selection `Book Now`
-  Action: confirm booking from favorite
+- Type: `button`
+  Label: `Got it!`
+  Action: dismiss mismatch alert modal
 
 3.9 `HistoryScreen`
 
@@ -453,9 +509,17 @@ Modal controls:
   Action: add spot to favorites
 
 - Type: `button`
-  Label: `BOOK`
+  Label: `BOOK` / `BOOK AGAIN`
   Action: book again from history
   Destination: vehicle selection -> `/screens/ActiveParkingScreen` on success
+
+- Type: `button`
+  Label: pagination `Previous`
+  Action: move to previous history page
+
+- Type: `button`
+  Label: pagination `Next`
+  Action: move to next history page
 
 - Type: `button`
   Label: scroll-to-top floating button
@@ -467,6 +531,10 @@ Custom date modal:
   Label: close custom date modal
   Action: close modal
 
+- Type: `calendar day`
+  Label: date cell
+  Action: choose start/end date
+
 - Type: `button`
   Label: `Clear`
   Action: clear custom date filter
@@ -476,6 +544,11 @@ Custom date modal:
   Action: apply custom range
 
 Vehicle selection modal:
+
+- Type: `tab control`
+  Label: shared 3-step visual indicator
+  Action: visual progress display for rebooking modal
+  Destination: informational only; actual user action remains select vehicle then `Book Now`
 
 - Type: `button`
   Label: close vehicle selection modal
@@ -526,14 +599,18 @@ Reservation detail modal:
   Action: set grid view
 
 - Type: `toggle`
+  Label: sign filter trigger
+  Action: open sign filter dropdown
+
+- Type: `filter option`
   Label: `All`
   Action: show all transaction signs
 
-- Type: `toggle`
+- Type: `filter option`
   Label: `+ Tokens`
   Action: show credit transactions
 
-- Type: `toggle`
+- Type: `filter option`
   Label: `- Tokens`
   Action: show debit transactions
 
@@ -550,15 +627,33 @@ Reservation detail modal:
   Action: open transaction details modal
 
 - Type: `button`
-  Label: retry on error state
-  Action: reload transactions/balance if shown
+  Label: pagination `Previous`
+  Action: move to previous transaction page
 
 - Type: `button`
-  Label: custom date `Clear`
+  Label: pagination `Next`
+  Action: move to next transaction page
+
+- Type: `button`
+  Label: scroll-to-top floating button
+  Action: scroll to top
+
+Custom date modal:
+
+- Type: `button`
+  Label: close custom date modal
+  Action: close modal
+
+- Type: `calendar day`
+  Label: date cell
+  Action: choose start/end date
+
+- Type: `button`
+  Label: `Clear`
   Action: clear date filter
 
 - Type: `button`
-  Label: custom date `Apply`
+  Label: `Apply`
   Action: apply date filter
 
 3.11 `TopUpScreen`
@@ -634,11 +729,21 @@ PayPal modal:
   Action: submit vehicle creation
   Destination: `/screens/HomeScreen` on success
 
+- Type: `button`
+  Label: `Save` in edit mode
+  Action: submit vehicle update
+  Destination: returns to previous screen on success
+
 3.13 `RegisteredVehiclesScreen`
 
 - Type: `icon button`
   Label: header back button via SharedHeader
   Action: standard back
+
+- Type: `icon button`
+  Label: edit vehicle icon on each card
+  Action: open `AddVehicleScreen` in edit mode with prefilled params
+  Destination: `/screens/AddVehicleScreen`
 
 - Type: `icon button`
   Label: delete vehicle icon on each card
@@ -930,13 +1035,13 @@ Activity history modal:
   Action: choose all/start/end
 
 - Type: `form control`
-  Label: search/filter inputs where shown in modal
-  Action: filter activity history
+  Label: search input
+  Action: filter activity history by name, plate, or area
 
 Slot details modal:
 
 - Type: `button`
-  Label: close slot details
+  Label: close slot details / `Go-back`
   Action: close modal
 
 - Type: `button`
@@ -954,16 +1059,28 @@ Slot details modal:
 Guest booking modal:
 
 - Type: `form control`
-  Label: guest fields
-  Action: enter guest booking details
+  Label: guest first name field
+  Action: enter first name
+
+- Type: `form control`
+  Label: guest last name field
+  Action: enter last name
+
+- Type: `form control`
+  Label: guest plate number field
+  Action: enter plate number / trigger plate check flow
+
+- Type: `form control`
+  Label: guest brand/model/color fields
+  Action: enter optional vehicle details
 
 - Type: `button`
-  Label: submit guest booking
+  Label: `Cancel`
+  Action: close guest booking modal
+
+- Type: `button`
+  Label: `Create Booking`
   Action: create guest booking
-
-- Type: `button`
-  Label: cancel/close guest booking
-  Action: close modal
 
 Attendant settings modal:
 
@@ -976,23 +1093,39 @@ Attendant settings modal:
   Action: logout attendant
   Destination: `/screens/LoginScreen`
 
-- Type: `toggle`
-  Label: notification settings when surfaced
-  Action: update attendant notification preference state
-
-Section settings modal:
+Section capacity / action modals:
 
 - Type: `button`
-  Label: close section settings
-  Action: close modal
+  Label: attendant action modal close / `Cancel`
+  Action: close action modal
 
 - Type: `button`
-  Label: set section unavailable
+  Label: spot `Set as Unavailable`
+  Action: mark selected spot unavailable
+
+- Type: `button`
+  Label: spot `Set as Available`
+  Action: mark selected spot available
+
+- Type: `button`
+  Label: `Book Guest Parking`
+  Action: open/create guest-parking flow from action modal
+
+- Type: `button`
+  Label: section settings close / `Cancel`
+  Action: close section settings modal
+
+- Type: `button`
+  Label: section `Set as Unavailable`
   Action: mark section unavailable
 
 - Type: `button`
-  Label: set section available
+  Label: section `Set as Available`
   Action: mark section available
+
+- Type: `button`
+  Label: motorcycle spot assignment/release actions
+  Action: assign or release section-based motorcycle/bike spots where rendered
 
 3.22 `QRScannerScreen` (Attendant)
 
@@ -1009,18 +1142,14 @@ Permission state controls:
 Scanner controls:
 
 - Type: `button`
-  Label: start parking scan button
+  Label: `Start Parking`
   Action: arm scanner in start mode
 
 - Type: `button`
-  Label: end parking scan button
+  Label: `End Parking`
   Action: arm scanner in end mode
 
-- Type: `button`
-  Label: stop scanning
-  Action: stop active scan session
-
-- Type: `button`
+- Type: `icon button`
   Label: close/back
   Action: return to dashboard
 
@@ -1031,18 +1160,33 @@ Scanner controls:
   - call start session API in start mode
   - call end session API in end mode
 
+Behavior note:
+- Scanning auto-stops after the configured timeout in code
+- No dedicated manual stop-scanning button is surfaced in the current UI
+
 ================================================================================
                         4. GAPS / AMBIGUITIES IN UI
 ================================================================================
 
-These exist in code or service flow but are not clearly surfaced as stable screens:
+These exist in code or service flow but are not clearly surfaced as stable
+first-class screens:
 
 - No dedicated user `My Bookings` screen
 - No user notifications screen
 - No dedicated booking details screen in standard navigation
-- Vehicle update exists at backend level but no clear edit-vehicle UI
-- Some HomeScreen controls are dynamic and depend on data/modals not all visible in one static pass
-- `FeedbackScreen` and `SubscriptionPlansScreen` exist but are not part of the clean primary route flow
+- Attendant notification settings state/API hooks exist in code, but a visible
+  notification toggle is not surfaced in the current settings modal UI
+- Some HomeScreen controls are dynamic and depend on modal/data state, so not
+  every booking path is visible in one static pass
+- `FeedbackScreen`, `SubscriptionPlansScreen`, and `HomeScreenFixed` exist in
+  the repo but are not part of the clean primary route flow
+
+Notable change from prior inventory:
+
+- Vehicle edit/update is now clearly surfaced in UI:
+  `RegisteredVehiclesScreen` has an edit icon that routes to
+  `AddVehicleScreen`, and `AddVehicleScreen` supports edit mode with prefilled
+  params and update submission
 
 ================================================================================
                                5. FILE USE

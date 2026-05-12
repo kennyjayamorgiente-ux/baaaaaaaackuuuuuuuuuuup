@@ -1,0 +1,634 @@
+================================================================================
+      NOT YET INCLUDED IN UPDATEDTappark-Black-Box .docx
+================================================================================
+
+Purpose:
+- List implemented behaviors and UI controls still not explicitly covered in
+  `UPDATEDTappark-Black-Box .docx`
+- Derived by comparing:
+  - `TAPPARK_APP_FUNCTIONALITY.txt`
+  - `TAPPARK_UI_CONTROL_INVENTORY.txt` (updated 2026-05-08)
+  - `UPDATEDTappark-Black-Box .docx`
+
+Important note:
+- This file excludes features already marked `[MISSING]` in
+  `TAPPARK_APP_FUNCTIONALITY.txt`
+- This is a helper checklist for manual addition into the black-box document
+- Stale items removed from the old helper:
+  - favorites search/filter items that are not in the current UI inventory
+  - vehicle edit uncertainty note, because edit mode is now clearly surfaced
+  - QR `stop scanning` button, because it is not surfaced as a visible control
+
+================================================================================
+1. ACTIVE PARKING SCREEN CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_APP_FUNCTIONALITY.txt`
+  - active parking tabs/content/end-of-session behavior
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `ActiveParkingScreen`
+
+Add black-box cases for:
+
+1. Go Back to Home button
+- Test scenario:
+  - Tap `Go Back to Home`
+- Expected result:
+  - User exits active parking and returns to the home flow correctly
+
+2. Try Again button
+- Test scenario:
+  - Trigger active parking load failure and tap `Try Again`
+- Expected result:
+  - Session/parking state reload is attempted successfully
+
+3. Add to Favorites button from active parking
+- Test scenario:
+  - Tap `Add to Favorites` while viewing active reservation
+- Expected result:
+  - Current parking spot/section is saved as a favorite successfully
+
+4. Refresh layout button
+- Test scenario:
+  - Tap `Refresh` while on parking layout tab
+- Expected result:
+  - Parking layout and spot state refresh successfully
+
+5. Grace-period warning modal close action
+- Test scenario:
+  - Trigger grace-period warning and dismiss it
+- Expected result:
+  - Warning modal closes correctly without breaking active session flow
+
+================================================================================
+2. HOME SCREEN / BOOKING CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `HomeScreen`
+
+Add black-box cases for:
+
+1. See all spots / all-spots entry
+- Test scenario:
+  - Tap all-spots entry from Home
+- Expected result:
+  - All-spots modal opens correctly
+
+2. Close all-spots modal
+- Test scenario:
+  - Open all-spots modal and close it
+- Expected result:
+  - Modal closes and user returns to Home
+
+3. Close frequent spots modal
+- Test scenario:
+  - Open frequent-spots modal and close it
+- Expected result:
+  - Modal closes successfully
+
+4. BOOK button inside frequent-spots modal
+- Test scenario:
+  - Tap `BOOK` inside frequent-spots modal
+- Expected result:
+  - The same quick-book vehicle-selection modal used by favorites/history opens
+  - The shared 3-step visual indicator is displayed in the modal
+  - User selects a compatible vehicle
+  - User taps `Book Now`
+  - Booking proceeds and routes to `ActiveParkingScreen` on success
+
+5. Vehicle selection modal during booking
+- Test scenario:
+  - Trigger frequent-used quick booking from Home
+- Expected result:
+  - Vehicle selection modal appears
+  - The shared 3-step visual indicator is visible
+  - Selected vehicle is applied to quick booking
+
+6. Booking confirmation modal actions
+- Test scenario:
+  - Open the Home parking-area booking modal and test confirm/cancel
+- Expected result:
+  - Confirm submits booking
+  - Cancel closes modal without creating booking
+
+7. Insufficient balance modal `Maybe Later`
+- Test scenario:
+  - Trigger insufficient-balance modal and tap `Maybe Later`
+- Expected result:
+  - Modal closes without starting top-up flow
+
+8. Insufficient balance modal `View Plans`
+- Test scenario:
+  - Trigger insufficient-balance modal and tap `View Plans`
+- Expected result:
+  - User is routed to `TopUpScreen`
+
+================================================================================
+3. FAVORITES SCREEN CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `FavoritesScreen`
+
+Add black-box cases for:
+
+1. List/grid switch
+- Test scenario:
+  - Toggle list/grid view on favorites
+- Expected result:
+  - Favorites display changes correctly between list and grid
+
+2. Pagination controls
+- Test scenario:
+  - Use favorites `Previous` and `Next` page controls
+- Expected result:
+  - User can navigate through favorite pages correctly
+
+3. Scroll-to-top floating button
+- Test scenario:
+  - Scroll favorites list and tap scroll-to-top control
+- Expected result:
+  - Favorites list returns to top correctly
+
+4. Vehicle selection modal close action
+- Test scenario:
+  - Start favorite rebooking and close the vehicle selection modal
+- Expected result:
+  - Modal closes without booking
+
+5. Vehicle option card selection
+- Test scenario:
+  - Select a vehicle in favorite rebooking flow
+- Expected result:
+  - Selected vehicle is highlighted/applied
+
+6. Book Now action in favorites modal
+- Test scenario:
+  - Tap `Book Now` after selecting vehicle from favorite flow
+- Expected result:
+  - Rebooking is submitted successfully
+
+7. Mismatch modal close action
+- Test scenario:
+  - Trigger favorite booking mismatch modal and close it
+- Expected result:
+  - Mismatch modal closes properly
+
+8. Mismatch modal `Got it!`
+- Test scenario:
+  - Trigger mismatch modal and tap `Got it!`
+- Expected result:
+  - Alert is dismissed successfully
+
+================================================================================
+4. HISTORY SCREEN CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `HistoryScreen`
+
+Add black-box cases for:
+
+1. Scroll-to-top floating button
+- Test scenario:
+  - Scroll history list and tap scroll-to-top control
+- Expected result:
+  - History list returns to top correctly
+
+2. Custom date modal open/close
+- Test scenario:
+  - Open custom date range modal and close it
+- Expected result:
+  - Modal opens and closes correctly
+
+3. Custom date modal Clear action
+- Test scenario:
+  - Apply or prepare a custom date selection and tap `Clear`
+- Expected result:
+  - Custom date filter values are cleared
+
+4. Custom date modal Apply action
+- Test scenario:
+  - Set a custom date range and tap `Apply`
+- Expected result:
+  - History list refreshes using the chosen date range
+
+5. Vehicle selection modal close action
+- Test scenario:
+  - Open vehicle selection modal from history rebook flow and close it
+- Expected result:
+  - Modal closes without rebooking
+
+6. Vehicle option card selection
+- Test scenario:
+  - Select a vehicle in history rebook flow
+- Expected result:
+  - Selected vehicle is highlighted/applied
+
+7. Book Now action from history vehicle modal
+- Test scenario:
+  - Tap `Book Now` after selecting vehicle for rebooking
+- Expected result:
+  - Rebooking is submitted successfully
+
+8. Mismatch modal close action
+- Test scenario:
+  - Trigger booking mismatch modal and close it
+- Expected result:
+  - Mismatch modal closes properly
+
+9. Mismatch modal `Got it!`
+- Test scenario:
+  - Trigger mismatch modal and tap `Got it!`
+- Expected result:
+  - Alert is dismissed successfully
+
+10. Reservation detail modal close
+- Test scenario:
+  - Open reservation details from history and close the modal
+- Expected result:
+  - User returns to history list normally
+
+================================================================================
+5. BALANCE SCREEN CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `BalanceScreen`
+
+Add black-box cases for:
+
+1. Explicit transaction type toggles
+- Test scenario:
+  - Tap `All`
+  - Tap `+ Tokens`
+  - Tap `- Tokens`
+- Expected result:
+  - Transaction list filters correctly by transaction type/sign
+
+2. Explicit date filter options
+- Test scenario:
+  - Apply:
+    - `All Time`
+    - `Last 7 Days`
+    - `This Month`
+    - `This Year`
+    - `Last Year`
+    - `Custom Range`
+- Expected result:
+  - Transaction list updates correctly for each selected range
+
+3. Pagination controls
+- Test scenario:
+  - Use transaction `Previous` and `Next` page controls
+- Expected result:
+  - User can navigate transaction pages correctly
+
+4. Scroll-to-top floating button
+- Test scenario:
+  - Scroll transaction list and tap scroll-to-top control
+- Expected result:
+  - Transaction list returns to top correctly
+
+5. Custom date modal open/close
+- Test scenario:
+  - Open custom date modal and close it
+- Expected result:
+  - Modal opens and closes correctly
+
+6. Custom date Clear action
+- Test scenario:
+  - Open custom date filter and tap `Clear`
+- Expected result:
+  - Custom date filter values reset correctly
+
+7. Custom date Apply action
+- Test scenario:
+  - Set custom transaction date range and tap `Apply`
+- Expected result:
+  - Transaction list refreshes using selected range
+
+================================================================================
+6. TOP-UP / PAYPAL CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `TopUpScreen`
+
+Add black-box cases for:
+
+1. Header back button
+- Test scenario:
+  - Tap back button on `TopUpScreen`
+- Expected result:
+  - User returns to previous screen correctly
+
+2. Close confirmation modal
+- Test scenario:
+  - Open purchase confirmation modal and tap close
+- Expected result:
+  - Confirmation modal closes successfully
+
+3. Cancel confirmation modal
+- Test scenario:
+  - Open purchase confirmation modal and tap `Cancel`
+- Expected result:
+  - Purchase is not started and modal closes
+
+4. Close PayPal modal
+- Test scenario:
+  - Open PayPal WebView modal and close it
+- Expected result:
+  - PayPal modal closes safely and app state remains stable
+
+================================================================================
+7. REGISTERED VEHICLES / ADD VEHICLE CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `RegisteredVehiclesScreen`
+  - `AddVehicleScreen`
+
+Add black-box cases for:
+
+1. Header back button on Registered Vehicles
+- Test scenario:
+  - Tap header back on `RegisteredVehiclesScreen`
+- Expected result:
+  - Returns to previous/profile flow
+
+2. Delete modal cancel action
+- Test scenario:
+  - Open delete confirmation and tap `Cancel`
+- Expected result:
+  - Vehicle is not deleted and modal closes
+
+3. Go Back button on Add Vehicle
+- Test scenario:
+  - Tap `Go Back` on `AddVehicleScreen`
+- Expected result:
+  - Returns to previous screen without submitting
+
+================================================================================
+8. PROFILE / FEEDBACK CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `ProfileScreen`
+  - `MyFeedbackScreen`
+  - `FeedbackScreen`
+
+Add black-box cases for:
+
+1. Profile picture options modal cancel
+- Test scenario:
+  - Open profile picture options and tap `Cancel`
+- Expected result:
+  - Modal closes without changing profile picture
+
+2. Rating modal close X
+- Test scenario:
+  - Open `Rate us` modal and tap close `X`
+- Expected result:
+  - Rating modal closes successfully
+
+3. Rating modal cancel button
+- Test scenario:
+  - Open rating modal and tap `Cancel`
+- Expected result:
+  - Modal closes and input is cleared
+
+4. Rating star controls
+- Test scenario:
+  - Tap star ratings 1 to 5
+- Expected result:
+  - Selected rating updates correctly
+
+5. MyFeedback retry button
+- Test scenario:
+  - Trigger feedback load error and tap `Retry`
+- Expected result:
+  - Feedback list reload is attempted
+
+6. MyFeedback empty-state Go to Profile button
+- Test scenario:
+  - Open empty feedback state and tap `Go to Profile`
+- Expected result:
+  - User returns to `ProfileScreen`
+
+7. MyFeedback scroll-to-top button
+- Test scenario:
+  - Scroll feedback list and tap scroll-to-top control
+- Expected result:
+  - Feedback list returns to top
+
+8. Feedback details modal close action
+- Test scenario:
+  - Open feedback detail modal and close it
+- Expected result:
+  - User returns to feedback list normally
+
+================================================================================
+9. LOGIN / SIGNUP CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `LoginScreen`
+  - `SignupScreen`
+
+Add black-box cases for:
+
+1. Login Remember Me toggle
+- Test scenario:
+  - Toggle `Remember Me`
+- Expected result:
+  - Toggle state changes correctly
+
+2. Login Register link
+- Test scenario:
+  - Tap `Register` link from login
+- Expected result:
+  - User is routed to `SignupScreen`
+
+3. Signup Go Back button
+- Test scenario:
+  - Tap `Go Back` on signup
+- Expected result:
+  - User returns to previous/auth flow correctly
+
+================================================================================
+10. ATTENDANT DASHBOARD / SETTINGS CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `DashboardScreen`
+
+Add black-box cases for:
+
+1. Header attendant profile/name group
+- Test scenario:
+  - Tap attendant profile/name area
+- Expected result:
+  - Settings modal opens successfully
+
+2. Activity history icon
+- Test scenario:
+  - Tap activity history icon
+- Expected result:
+  - Activity history modal opens successfully
+
+3. Slot view toggles
+- Test scenario:
+  - Switch between list and grid slot view
+- Expected result:
+  - Slot presentation updates correctly
+
+4. Vehicle type filters
+- Test scenario:
+  - Filter dashboard by vehicle type
+- Expected result:
+  - Slot list/grid updates according to selected vehicle type
+
+5. Activity history modal close action
+- Test scenario:
+  - Open activity history modal and close it
+- Expected result:
+  - Modal closes successfully
+
+6. Activity history status filter dropdown
+- Test scenario:
+  - Change status filter in activity history modal
+- Expected result:
+  - Table updates for selected status
+
+7. Settings modal close action
+- Test scenario:
+  - Open attendant settings modal and close it
+- Expected result:
+  - Modal closes successfully
+
+8. Settings modal logout
+- Test scenario:
+  - Tap `Log Out` from attendant settings modal
+- Expected result:
+  - Attendant is signed out and routed to login
+
+9. Attendant action modal close / Cancel
+- Test scenario:
+  - Open attendant action modal and tap `Cancel`
+- Expected result:
+  - Action modal closes successfully
+
+10. Spot Set as Unavailable action
+- Test scenario:
+  - Mark selected spot unavailable
+- Expected result:
+  - Spot becomes unavailable successfully
+
+11. Spot Set as Available action
+- Test scenario:
+  - Mark selected spot available
+- Expected result:
+  - Spot becomes available successfully
+
+12. Book Guest Parking action from attendant action modal
+- Test scenario:
+  - Tap `Book Guest Parking`
+- Expected result:
+  - Guest-parking flow opens correctly
+
+13. Section settings modal close action
+- Test scenario:
+  - Open section settings and close it
+- Expected result:
+  - Modal closes successfully
+
+14. Section settings modal set section unavailable
+- Test scenario:
+  - Mark selected section unavailable
+- Expected result:
+  - Section becomes unavailable successfully
+
+15. Section settings modal set section available
+- Test scenario:
+  - Mark selected section available
+- Expected result:
+  - Section becomes available successfully
+
+16. Guest booking modal cancel action
+- Test scenario:
+  - Open guest booking modal and tap `Cancel`
+- Expected result:
+  - Modal closes without creating a booking
+
+17. Guest booking modal create action
+- Test scenario:
+  - Fill guest booking fields and tap `Create Booking`
+- Expected result:
+  - Guest booking is created successfully
+
+================================================================================
+11. QR SCANNER CONTROL CASES NOT YET INCLUDED
+================================================================================
+
+Reference:
+- `TAPPARK_UI_CONTROL_INVENTORY.txt`
+  - `QRScannerScreen`
+
+Add black-box cases for:
+
+1. Grant Permission button
+- Test scenario:
+  - Open QR scanner without camera permission and tap `Grant Permission`
+- Expected result:
+  - Permission request is triggered correctly
+
+2. Go Back button in permission state
+- Test scenario:
+  - Open QR scanner permission state and tap `Go Back`
+- Expected result:
+  - User returns to previous/dashboard screen
+
+3. Close/back button in scanner view
+- Test scenario:
+  - Open QR scanner and tap the close button
+- Expected result:
+  - User returns to dashboard
+
+================================================================================
+12. OPTIONAL CLEANUP / CONSISTENCY ITEMS
+================================================================================
+
+These are not necessarily missing features, but they should be standardized in
+the black-box document if you want stronger consistency with the references:
+
+1. Terminology consistency
+- The app/functionality docs mix `tokens` and `hours`
+- Keep black-box expected results aligned with actual current UI wording
+
+2. Route label consistency
+- Standardize names like:
+  - `ProfileScreen`
+  - `BalanceScreen`
+  - `ActiveParkingScreen`
+  - `RegisteredVehiclesScreen`
+
+3. Modal-action coverage style
+- For screens with important modals, add both:
+  - open action
+  - close/cancel action
+
+================================================================================
+END
+================================================================================

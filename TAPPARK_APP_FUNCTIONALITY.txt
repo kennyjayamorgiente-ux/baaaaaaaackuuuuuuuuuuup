@@ -240,26 +240,57 @@ Note:
 [IMPLEMENTED] Frequently used spots flow
 - Home shows frequently used spots
 - User can book quickly from these
+- Current quick-book behavior uses the same actual action pattern as favorites/history rebooking:
+  1. User taps the frequent-used `BOOK` action
+  2. Vehicle selection modal opens
+  3. User selects a compatible vehicle
+  4. User taps `Book Now`
+  5. Booking is created and user is routed to `ActiveParkingScreen`
+- UI note:
+  - the modal currently displays the same 3-step visual indicator
+  - but the actual user actions in this quick-book path are still just:
+    - select vehicle
+    - tap `Book Now`
 
 [IMPLEMENTED] Favorites flow
 1. User opens `FavoritesScreen`
 2. Sees saved favorite spots
 3. Can remove favorite
-4. Can book again from favorite
+4. Can book again from favorite through the same quick-book modal pattern:
+   - open vehicle selection modal
+   - select compatible vehicle
+   - tap `Book Now`
 5. Favorites are shown in paged presentation when list length exceeds 10 items
+6. UI note:
+   - favorites rebooking may also show the same 3-step visual indicator
+   - but the actual actions remain select vehicle then `Book Now`
 
 [IMPLEMENTED] History re-use flow
 1. User opens `HistoryScreen`
 2. Sees previous parking sessions
-3. Can book again from history
+3. Can book again from history through the same quick-book modal pattern:
+   - open vehicle selection modal
+   - select compatible vehicle
+   - tap `Book Now`
 4. Can add history spot to favorites
 5. History list supports search, date filtering, list/grid display, and page navigation after 10 records
+6. UI note:
+   - history rebooking may also show the same 3-step visual indicator
+   - but the actual actions remain select vehicle then `Book Now`
 
 3.9 BOOKING FLOW
 
 [IMPLEMENTED] Main booking flow
-1. User selects or confirms a vehicle
-2. User selects a parking area or spot source
+1. User selects a parking area or spot source
+2. App branches into one of the current booking UI patterns:
+   - Quick-book modal pattern for frequent-used spots, favorites, and history:
+     - select compatible vehicle
+     - tap `Book Now`
+     - a 3-step indicator may still be displayed visually in the modal
+   - Home parking-area booking modal pattern:
+     - user selects/confirms vehicle
+     - app assigns/checks spot availability
+     - user taps `Book Now` from the booking modal
 3. App checks availability
 4. App checks compatibility
 5. App checks active booking restriction
