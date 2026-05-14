@@ -395,12 +395,34 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     fontWeight: '700',
   },
   filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: getResponsivePadding(12),
+    flexWrap: 'wrap',
     marginBottom: getResponsivePadding(12),
     zIndex: 20,
     elevation: 20,
   },
   filterDropdownAnchor: {
     position: 'relative',
+    zIndex: 21,
+  },
+  spendingSummaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: getResponsivePadding(6),
+    paddingVertical: getResponsivePadding(10),
+    paddingHorizontal: getResponsivePadding(14),
+    borderRadius: getResponsiveSize(20),
+    backgroundColor: colors.primary,
+    minHeight: getResponsiveSize(40),
+  },
+  spendingSummaryButtonText: {
+    color: colors.textInverse,
+    fontSize: getResponsiveFontSize(13),
+    fontWeight: '700',
   },
   filterDropdownTrigger: {
     alignSelf: 'flex-start',
@@ -681,6 +703,29 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     paddingVertical: getResponsivePadding(15),
     maxHeight: screenHeight * 0.5,
   },
+  spendingHeroCard: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: getResponsiveSize(14),
+    padding: getResponsivePadding(16),
+    marginBottom: getResponsivePadding(12),
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  spendingHeroLabel: {
+    fontSize: getResponsiveFontSize(13),
+    color: colors.textSecondary,
+    marginBottom: getResponsivePadding(6),
+  },
+  spendingHeroValue: {
+    fontSize: getResponsiveFontSize(26),
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: getResponsivePadding(4),
+  },
+  spendingHeroSubtext: {
+    fontSize: getResponsiveFontSize(12),
+    color: colors.textMuted,
+  },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -711,6 +756,14 @@ export const getBalanceScreenStyles = (colors: ThemeColors) => StyleSheet.create
     fontSize: getResponsiveFontSize(18),
     fontWeight: 'bold',
     color: colors.primary,
+  },
+  summaryPositiveValue: {
+    color: colors.success,
+    fontWeight: '700',
+  },
+  summaryNegativeValue: {
+    color: colors.error,
+    fontWeight: '700',
   },
   transactionId: {
     fontSize: getResponsiveFontSize(12),

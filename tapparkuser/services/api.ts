@@ -443,7 +443,11 @@ export class ApiService {
         }
         // Handle 400 Bad Request - check if it's a spot availability error
         if (response.status === 400) {
-          const errorMessage = data.message || data.error || 'Bad request';
+          const validationMessage =
+            Array.isArray(data.errors) && data.errors.length > 0
+              ? data.errors[0]?.msg
+              : null;
+          const errorMessage = validationMessage || data.message || data.error || 'Bad request';
           // Don't log as error for user-facing validation/business logic issues
           if (this.isUserFacingErrorMessage(errorMessage)) {
             console.log(`📋 Business Logic Response (${response.status}):`, errorMessage);

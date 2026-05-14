@@ -75,7 +75,7 @@ const getResponsiveMargin = (baseMargin: number) => {
   return baseMargin;
 };
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 const FavoritesScreen: React.FC = () => {
   const router = useRouter();

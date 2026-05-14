@@ -76,9 +76,18 @@ const formatChargedHours = (decimalHours: number): string => {
   }
 };
 
-const ITEMS_PER_PAGE = 10;
+const formatDateForFilter = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+const ITEMS_PER_PAGE = 5;
 
 const HistoryScreen: React.FC = () => {
+  const today = useMemo(() => new Date(), []);
+  const defaultMonthStart = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+    [today]
+  );
   const router = useRouter();
   const { showLoading, hideLoading } = useLoading();
   const colors = useThemeColors();
@@ -103,11 +112,11 @@ const HistoryScreen: React.FC = () => {
   const [isBooking, setIsBooking] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | '7days' | 'month' | 'year' | 'lastyear' | 'custom'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | '7days' | 'month' | 'year' | 'lastyear' | 'custom'>('custom');
   const [isFilterDropdownVisible, setIsFilterDropdownVisible] = useState(false);
   const [isCustomFilterModalVisible, setIsCustomFilterModalVisible] = useState(false);
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
+  const [customStartDate, setCustomStartDate] = useState(formatDateForFilter(defaultMonthStart));
+  const [customEndDate, setCustomEndDate] = useState(formatDateForFilter(today));
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const mainScrollRef = useRef<ScrollView>(null);
 

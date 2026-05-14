@@ -97,9 +97,25 @@ const toNumber = (value: any): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const ITEMS_PER_PAGE = 10;
+const formatCurrency = (value: number): string => {
+  return `PHP ${toNumber(value).toLocaleString('en-PH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+const formatDateForFilter = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+const ITEMS_PER_PAGE = 5;
 
 const BalanceScreen: React.FC = () => {
+  const today = React.useMemo(() => new Date(), []);
+  const defaultMonthStart = React.useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+    [today]
+  );
   const router = useRouter();
   const { user } = useAuth();
   const colors = useThemeColors();
@@ -119,12 +135,13 @@ const BalanceScreen: React.FC = () => {
   const [creditTransactions, setCreditTransactions] = useState<any[]>([]);
   const [debitTransactions, setDebitTransactions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | '7days' | 'month' | 'year' | 'lastyear' | 'custom'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | '7days' | 'month' | 'year' | 'lastyear' | 'custom'>('custom');
   const [isFilterDropdownVisible, setIsFilterDropdownVisible] = useState(false);
   const [isSignDropdownVisible, setIsSignDropdownVisible] = useState(false);
   const [isCustomFilterModalVisible, setIsCustomFilterModalVisible] = useState(false);
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
+  const [isSpendingSummaryModalVisible, setIsSpendingSummaryModalVisible] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState(formatDateForFilter(defaultMonthStart));
+  const [customEndDate, setCustomEndDate] = useState(formatDateForFilter(today));
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const contentScrollRef = useRef<ScrollView>(null);
   const textScaleProps = { maxFontSizeMultiplier: 1.15 };
@@ -363,6 +380,35 @@ const BalanceScreen: React.FC = () => {
     if (h > 0) return `${h} hr`;
     return `${m} min`;
   };
+
+  const getTransactionMoneyValue = (transaction: any) => {
+    return toNumber(transaction.amount ?? transaction.cost ?? 0);
+  };
+
+  const getTransactionTokenValue = (transaction: any) => {
+    if (transaction.type === 'parking') {
+      return toNumber(
+        transaction.tokens_deducted ??
+        transaction.billingBreakdown?.tokensCharged ??
+        transaction.charged_hours ??
+        transaction.hours_deducted ??
+        transaction.billingBreakdown?.totalChargedHours
+      );
+    }
+
+    if (transaction.payment_type === 'subscription') {
+      return toNumber(transaction.number_of_tokens);
+    }
+
+    return 0;
+  };
+
+  const shouldIncludeInSpendingSummary = (transaction: any) => {
+    const status = String(transaction?.status || '').toLowerCase();
+    if (!status) return true;
+    return status !== 'failed' && status !== 'cancelled';
+  };
+
   // Handle transaction selection and open modal
   const handleTransactionPress = (transaction: any) => {
     setSelectedTransaction(transaction);
@@ -522,6 +568,44 @@ const BalanceScreen: React.FC = () => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredTransactions, currentPage]);
+
+  const spendingSummary = React.useMemo(() => {
+    const eligibleTransactions = filteredTransactions.filter(shouldIncludeInSpendingSummary);
+    const credits = eligibleTransactions.filter((transaction) => getTransactionSign(transaction) === 'credit');
+    const debits = eligibleTransactions.filter((transaction) => getTransactionSign(transaction) === 'debit');
+
+    const totalMoneySpent = credits.reduce((sum, transaction) => {
+      return sum + getTransactionMoneyValue(transaction);
+    }, 0);
+
+    const totalTokensAdded = credits.reduce((sum, transaction) => {
+      return sum + getTransactionTokenValue(transaction);
+    }, 0);
+
+    const totalTokensUsed = debits.reduce((sum, transaction) => {
+      return sum + getTransactionTokenValue(transaction);
+    }, 0);
+
+    const latestDate = eligibleTransactions.reduce((latest: Date | null, transaction) => {
+      const currentDate = parseTransactionDate(transaction);
+      if (!currentDate) return latest;
+      if (!latest || currentDate > latest) return currentDate;
+      return latest;
+    }, null);
+
+    return {
+      totalTransactions: eligibleTransactions.length,
+      creditTransactions: credits.length,
+      debitTransactions: debits.length,
+      totalMoneySpent,
+      totalTokensAdded,
+      totalTokensUsed,
+      netTokens: totalTokensAdded - totalTokensUsed,
+      rangeLabel: getDateFilterLabel(),
+      searchLabel: searchQuery.trim() || 'None',
+      latestDateLabel: latestDate ? formatTransactionDate(latestDate.toISOString()) : 'No transactions',
+    };
+  }, [filteredTransactions, searchQuery, dateFilter, customStartDate, customEndDate]);
 
   React.useEffect(() => {
     if (filteredTransactions.length > 0) {
@@ -951,6 +1035,18 @@ const BalanceScreen: React.FC = () => {
                   </View>
                 )}
               </View>
+
+              <TouchableOpacity
+                style={balanceScreenStyles.spendingSummaryButton}
+                onPress={() => {
+                  setIsFilterDropdownVisible(false);
+                  setIsSignDropdownVisible(false);
+                  setIsSpendingSummaryModalVisible(true);
+                }}
+              >
+                <Ionicons name="calculator-outline" size={16} color="#FFFFFF" />
+                <Text style={balanceScreenStyles.spendingSummaryButtonText}>Total Spending</Text>
+              </TouchableOpacity>
             </View>
             
             {isLoading ? (
@@ -1123,6 +1219,98 @@ const BalanceScreen: React.FC = () => {
                 onPress={applyCustomDateFilter}
               >
                 <Text style={balanceScreenStyles.customFilterApplyText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isSpendingSummaryModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsSpendingSummaryModalVisible(false)}
+      >
+        <View style={balanceScreenStyles.modalOverlay}>
+          <View style={balanceScreenStyles.modalContainer}>
+            <View style={balanceScreenStyles.modalHeader}>
+              <Text style={balanceScreenStyles.modalTitle}>Total Spending</Text>
+              <TouchableOpacity
+                onPress={() => setIsSpendingSummaryModalVisible(false)}
+                style={balanceScreenStyles.closeButton}
+              >
+                <Text style={balanceScreenStyles.closeButtonText}>X</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={balanceScreenStyles.modalContent} showsVerticalScrollIndicator={false}>
+              <View style={balanceScreenStyles.spendingHeroCard}>
+                <Text style={balanceScreenStyles.spendingHeroLabel}>Total money spent</Text>
+                <Text style={balanceScreenStyles.spendingHeroValue}>
+                  {formatCurrency(spendingSummary.totalMoneySpent)}
+                </Text>
+                <Text style={balanceScreenStyles.spendingHeroSubtext}>
+                  Based on the transactions visible in the current filters
+                </Text>
+              </View>
+
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Date range:</Text>
+                <Text style={balanceScreenStyles.detailValue}>{spendingSummary.rangeLabel}</Text>
+              </View>
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Search filter:</Text>
+                <Text style={balanceScreenStyles.detailValue}>{spendingSummary.searchLabel}</Text>
+              </View>
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Transactions counted:</Text>
+                <Text style={balanceScreenStyles.detailValue}>{spendingSummary.totalTransactions}</Text>
+              </View>
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Top-up transactions:</Text>
+                <Text style={balanceScreenStyles.detailValue}>{spendingSummary.creditTransactions}</Text>
+              </View>
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Parking deductions:</Text>
+                <Text style={balanceScreenStyles.detailValue}>{spendingSummary.debitTransactions}</Text>
+              </View>
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Tokens added:</Text>
+                <Text style={balanceScreenStyles.detailValue}>
+                  {formatHoursToHHMM(spendingSummary.totalTokensAdded)} Tokens
+                </Text>
+              </View>
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Tokens spent:</Text>
+                <Text style={balanceScreenStyles.detailValue}>
+                  {formatHoursToHHMM(spendingSummary.totalTokensUsed)} Tokens
+                </Text>
+              </View>
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Net token balance:</Text>
+                <Text
+                  style={[
+                    balanceScreenStyles.detailValue,
+                    spendingSummary.netTokens >= 0
+                      ? balanceScreenStyles.summaryPositiveValue
+                      : balanceScreenStyles.summaryNegativeValue,
+                  ]}
+                >
+                  {formatHoursToHHMM(spendingSummary.netTokens)} Tokens
+                </Text>
+              </View>
+              <View style={balanceScreenStyles.detailRow}>
+                <Text style={balanceScreenStyles.detailLabel}>Latest transaction:</Text>
+                <Text style={balanceScreenStyles.detailValue}>{spendingSummary.latestDateLabel}</Text>
+              </View>
+            </ScrollView>
+
+            <View style={balanceScreenStyles.modalFooter}>
+              <TouchableOpacity
+                style={balanceScreenStyles.modalCloseButton}
+                onPress={() => setIsSpendingSummaryModalVisible(false)}
+              >
+                <Text style={balanceScreenStyles.modalCloseButtonText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>

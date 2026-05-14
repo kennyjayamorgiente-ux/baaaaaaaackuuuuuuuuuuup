@@ -89,6 +89,51 @@ const normalizeIdentifier = (value) =>
     .trim()
     .replace(/[^a-zA-Z0-9]/g, '');
 
+const parseDevBypassAccounts = () => {
+  const rawAccounts = process.env.DEV_BYPASS_ACCOUNTS;
+  if (!rawAccounts || process.env.NODE_ENV === 'production') {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawAccounts);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((account) => {
+        const identifier = normalizeIdentifier(account?.identifier);
+        const password = String(account?.password || '');
+
+        if (!identifier || !password) {
+          return null;
+        }
+
+        return {
+          identifier,
+          password,
+          email: String(account?.email || '').trim(),
+          firstName: String(account?.firstName || '').trim(),
+          lastName: String(account?.lastName || '').trim(),
+          userTypeId: Number(account?.userTypeId) || 1,
+        };
+      })
+      .filter(Boolean);
+  } catch (error) {
+    console.error('Failed to parse DEV_BYPASS_ACCOUNTS:', error.message);
+    return [];
+  }
+};
+
+const findMatchingDevBypassAccount = (identifier, password) => {
+  const normalizedIdentifier = normalizeIdentifier(identifier);
+  return parseDevBypassAccounts().find(
+    (account) =>
+      account.identifier === normalizedIdentifier && account.password === password
+  ) || null;
+};
+
 const pickFirstString = (...values) => {
   for (const value of values) {
     if (typeof value === 'string' && value.trim()) {
@@ -357,6 +402,7 @@ router.post('/login', loginValidation, async (req, res) => {
     const rawIdentifier = String(req.body.identifier || req.body.email || '').trim();
     const identifier = normalizeIdentifier(rawIdentifier);
     const { password } = req.body;
+    const devBypassAccount = findMatchingDevBypassAccount(identifier, password);
 
     if (!identifier) {
       return res.status(400).json({
@@ -365,102 +411,143 @@ router.post('/login', loginValidation, async (req, res) => {
       });
     }
 
-    // Always verify kiosk credentials via MIS student-login first.
-    try {
-      // MIS may require the original ID formatting (e.g. with dashes), so try raw first.
-      const loginIdentifiers = rawIdentifier !== identifier
-        ? [rawIdentifier, identifier]
-        : [rawIdentifier];
+    if (!devBypassAccount) {
+      // Always verify kiosk credentials via MIS student-login first.
+      try {
+        // MIS may require the original ID formatting (e.g. with dashes), so try raw first.
+        const loginIdentifiers = rawIdentifier !== identifier
+          ? [rawIdentifier, identifier]
+          : [rawIdentifier];
 
-      let misVerified = false;
-      for (const loginIdentifier of loginIdentifiers) {
-        try {
-          await tapparkClient.loginStudent(loginIdentifier, password);
-          misVerified = true;
-          break;
-        } catch (_attemptError) {
-          // Try next identifier format.
+        let misVerified = false;
+        for (const loginIdentifier of loginIdentifiers) {
+          try {
+            await tapparkClient.loginStudent(loginIdentifier, password);
+            misVerified = true;
+            break;
+          } catch (_attemptError) {
+            // Try next identifier format.
+          }
         }
-      }
 
-      if (!misVerified) {
-        throw new Error('MIS credential verification failed');
-      }
-    } catch (_misError) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[Auth login] MIS student-login failed:', {
-          rawIdentifier,
-          normalizedIdentifier: identifier
+        if (!misVerified) {
+          throw new Error('MIS credential verification failed');
+        }
+      } catch (misError) {
+        const status = misError?.response?.status || 401;
+        const remoteMessage =
+          misError?.response?.data?.message ||
+          misError?.response?.data?.error ||
+          misError?.message ||
+          'MIS credential verification failed';
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Auth login] MIS student-login failed:', {
+            rawIdentifier,
+            normalizedIdentifier: identifier,
+            status,
+            message: remoteMessage,
+            responseData: misError?.response?.data ?? null,
+          });
+        }
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid ID number or password'
         });
       }
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid ID number or password'
+    } else if (process.env.NODE_ENV !== 'production') {
+      console.log('[Auth login] Developer bypass login used:', {
+        identifier,
+        email: devBypassAccount.email || null,
       });
     }
 
     // Credentials are valid in MIS; now resolve local user profile.
     // Check if user has accepted terms by checking if they have a TERMS_ACCEPTED log entry
-    const users = await db.query(`
-      SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture,
-             u.external_user_id, u.external_source, u.external_type,
-             t.account_type_name,
-             CASE 
-               WHEN EXISTS (
-                 SELECT 1 FROM user_logs 
-                 WHERE user_id = u.user_id 
-                 AND action_type = 'TERMS_ACCEPTED'
-               ) THEN 1
-               ELSE 0
-             END as terms_accepted
-      FROM users u
-      LEFT JOIN types t ON u.user_type_id = t.type_id
-      WHERE u.external_source = 'foundationu_mis'
-        AND u.external_type = 'student'
-        AND REPLACE(REPLACE(COALESCE(u.external_user_id, ''), '-', ''), ' ', '') = ?
-      LIMIT 1
-    `, [identifier]);
+    const users = devBypassAccount
+      ? await db.query(`
+        SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture,
+               u.external_user_id, u.external_source, u.external_type,
+               t.account_type_name,
+               CASE 
+                 WHEN EXISTS (
+                   SELECT 1 FROM user_logs 
+                   WHERE user_id = u.user_id 
+                   AND action_type = 'TERMS_ACCEPTED'
+                 ) THEN 1
+                 ELSE 0
+               END as terms_accepted
+        FROM users u
+        LEFT JOIN types t ON u.user_type_id = t.type_id
+        WHERE REPLACE(REPLACE(COALESCE(u.external_user_id, ''), '-', ''), ' ', '') = ?
+           OR LOWER(COALESCE(u.email, '')) = LOWER(?)
+        LIMIT 1
+      `, [identifier, devBypassAccount.email || rawIdentifier])
+      : await db.query(`
+        SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.tokens, u.user_type_id, u.profile_picture,
+               u.external_user_id, u.external_source, u.external_type,
+               t.account_type_name,
+               CASE 
+                 WHEN EXISTS (
+                   SELECT 1 FROM user_logs 
+                   WHERE user_id = u.user_id 
+                   AND action_type = 'TERMS_ACCEPTED'
+                 ) THEN 1
+                 ELSE 0
+               END as terms_accepted
+        FROM users u
+        LEFT JOIN types t ON u.user_type_id = t.type_id
+        WHERE u.external_source = 'foundationu_mis'
+          AND u.external_type = 'student'
+          AND REPLACE(REPLACE(COALESCE(u.external_user_id, ''), '-', ''), ' ', '') = ?
+        LIMIT 1
+      `, [identifier]);
 
     let user = users[0];
 
     if (!user) {
-      let firstName = 'Student';
-      let lastName = identifier;
-      let email = `${identifier}@foundationu-mis.local`;
+      let firstName = devBypassAccount?.firstName || 'Student';
+      let lastName = devBypassAccount?.lastName || identifier;
+      let email = devBypassAccount?.email || `${identifier}@foundationu-mis.local`;
 
-      try {
-        const studentPayload = await tapparkClient.getStudent(rawIdentifier || identifier);
-        const source = unwrapPayload(studentPayload);
-        const person = findPersonRecord(source) || {};
-        const fullName = pickFirstString(person.full_name, person.fullname, person.name);
-        const nameParts = fullName ? fullName.split(/\s+/).filter(Boolean) : [];
+      if (!devBypassAccount) {
+        try {
+          const studentPayload = await tapparkClient.getStudent(rawIdentifier || identifier);
+          const source = unwrapPayload(studentPayload);
+          const person = findPersonRecord(source) || {};
+          const fullName = pickFirstString(person.full_name, person.fullname, person.name);
+          const nameParts = fullName ? fullName.split(/\s+/).filter(Boolean) : [];
 
-        firstName = pickFirstString(
-          person.first_name,
-          person.firstname,
-          person.firstName,
-          nameParts[0],
-          firstName
-        );
-        lastName = pickFirstString(
-          person.last_name,
-          person.lastname,
-          person.lastName,
-          nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
-          lastName
-        );
-        email = pickFirstString(
-          person.email,
-          person.email_address,
-          person.school_email,
-          person.emailAddress,
-          email
-        );
-      } catch (_profileError) {
-        // Use fallback values when profile lookup fails; credential verification already passed.
+          firstName = pickFirstString(
+            person.first_name,
+            person.firstname,
+            person.firstName,
+            nameParts[0],
+            firstName
+          );
+          lastName = pickFirstString(
+            person.last_name,
+            person.lastname,
+            person.lastName,
+            nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
+            lastName
+          );
+          email = pickFirstString(
+            person.email,
+            person.email_address,
+            person.school_email,
+            person.emailAddress,
+            email
+          );
+        } catch (_profileError) {
+          // Use fallback values when profile lookup fails; credential verification already passed.
+        }
       }
 
       const refreshedHash = await bcrypt.hash(password, 12);
+      const externalSource = devBypassAccount ? 'developer_bypass' : 'foundationu_mis';
+      const externalType = 'student';
+      const userTypeId = devBypassAccount?.userTypeId || 1;
       const createResult = await db.query(
         `INSERT INTO users (
           email,
@@ -473,8 +560,8 @@ router.post('/login', loginValidation, async (req, res) => {
           external_source,
           external_type,
           external_last_synced_at
-        ) VALUES (?, ?, ?, ?, 1, 0, ?, 'foundationu_mis', 'student', ?)`,
-        [email, refreshedHash, firstName, lastName, identifier, new Date()]
+        ) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+        [email, refreshedHash, firstName, lastName, userTypeId, identifier, externalSource, externalType, new Date()]
       );
 
       const createdUserRows = await db.query(`

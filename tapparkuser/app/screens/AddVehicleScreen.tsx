@@ -100,6 +100,30 @@ const VEHICLE_TYPES = [
   { value: 'ebike', label: 'E-bike' },
 ];
 
+const normalizeVehicleType = (value: string | string[] | undefined) => {
+  const rawValue = Array.isArray(value) ? value[0] || '' : value || '';
+  const normalizedValue = rawValue.trim().toLowerCase();
+
+  switch (normalizedValue) {
+    case 'car':
+      return 'car';
+    case 'motorcycle':
+      return 'motorcycle';
+    case 'bike':
+    case 'bikes':
+    case 'bicycle':
+    case 'bicycles':
+      return 'bicycle';
+    case 'ebike':
+    case 'ebikes':
+    case 'e-bike':
+    case 'e-bikes':
+      return 'ebike';
+    default:
+      return normalizedValue;
+  }
+};
+
 export default function AddVehicleScreen() {
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
@@ -138,7 +162,7 @@ export default function AddVehicleScreen() {
   React.useEffect(() => {
     if (!isEditMode) return;
 
-    setVehicleType(getParamString(params.vehicleType));
+    setVehicleType(normalizeVehicleType(params.vehicleType));
     setVehicleColor(getParamString(params.color));
     setPlateNumber(getParamString(params.plateNumber));
     setVehicleBrand(getParamString(params.brand));
@@ -247,7 +271,7 @@ export default function AddVehicleScreen() {
       
       const vehicleData = {
         plateNumber: plateNumber.trim(),
-        vehicleType: vehicleType,
+        vehicleType: normalizeVehicleType(vehicleType),
         brand: vehicleBrand.trim() || undefined,
         model: vehicleModel.trim() || undefined,
         color: vehicleColor.trim() || undefined,
