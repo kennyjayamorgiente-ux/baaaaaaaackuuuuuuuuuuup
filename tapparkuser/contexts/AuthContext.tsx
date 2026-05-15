@@ -15,6 +15,7 @@ interface User {
   type_id: number;
   account_type_name: string;
   terms_accepted?: boolean;
+  has_seen_about?: boolean;
 }
 
 interface AuthContextType {

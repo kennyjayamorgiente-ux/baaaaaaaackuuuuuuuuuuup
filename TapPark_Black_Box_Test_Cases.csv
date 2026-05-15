@@ -1,0 +1,498 @@
+"Test Case ID","Module/Function","Test Scenario/Steps","Expected Results","Pass","Remarks"
+"SUB-001","Authentication / Startup Routing","Verify unauthenticated subscriber is redirected to Login screen
+Test Steps:
+1. Ensure no valid session is stored for the app
+2. Open the TapPark app","The app completes startup checks and routes the user to the Login screen.","",""
+"SUB-002","Authentication / Startup Routing","Verify authenticated subscriber with completed onboarding is redirected to Home screen
+Test Steps:
+1. Ensure a valid subscriber session already exists for an account with completed onboarding
+2. Launch the TapPark app","The app validates the stored session successfully and routes the user directly to the Home screen.","",""
+"SUB-003","Authentication / Login","Verify subscriber with completed onboarding can log in with valid credentials
+Test Steps:
+1. Enter a valid subscriber ID number or identifier for an account that has already completed onboarding
+2. Enter the correct password
+3. Tap the Login button","The login request succeeds and the app routes the subscriber to the Home screen.","",""
+"SUB-004","Authentication / Login","Verify first-time subscriber is routed to About screen after successful login
+Test Steps:
+1. Enter a valid subscriber ID number or identifier for an account that has not completed onboarding yet
+2. Enter the correct password
+3. Tap the Login button","The login request succeeds and the app routes the subscriber to the About screen for first-login onboarding.","",""
+"SUB-005","Authentication / Login","Verify login is blocked when required fields are incomplete
+Test Steps:
+1. Leave the ID Number field empty
+2. Enter any password
+3. Tap the Login button
+4. Enter a sample or valid ID number
+5. Leave the password field empty
+6. Tap the Login button","The app prevents submission and shows the correct validation message when the ID Number field is empty and when the password field is empty.","",""
+"SUB-006","Authentication / Login","Verify login fails with invalid credentials
+Test Steps:
+1. Enter an invalid or unregistered ID number
+2. Enter an incorrect password
+3. Tap the Login button","The app does not log in the user and displays an authentication error message.","",""
+"SUB-007","Authentication / Login","Verify Remember Me toggle can be changed
+Test Steps:
+1. Locate the Remember Me option
+2. Tap the Remember Me toggle once
+3. Tap the Remember Me toggle again","The Remember Me control changes state correctly each time it is tapped.","",""
+"SUB-008","Onboarding / About Screen","Verify About screen is displayed for first-login onboarding","The About screen is displayed and shows the app introduction content together with the onboarding next action.","",""
+"SUB-009","Onboarding / About Screen","Verify subscriber can continue from About screen to Home screen
+Test Steps:
+1. Tap the onboarding next arrow button","The app marks onboarding as completed and routes the user to the Home screen.","",""
+"SUB-010","Home / Terms Acceptance","Verify terms acceptance modal is shown when terms are not yet accepted
+Test Steps:
+1. Navigate to the Home screen using an account that has not accepted the terms yet","The app displays the terms acceptance modal before the user can continue normal Home usage.","",""
+"SUB-011","Home / Terms Acceptance","Verify subscriber can accept terms and continue using the app
+Test Steps:
+1. Open the Home screen using an account that has not accepted the terms yet
+2. Tap the Accept button on the terms acceptance modal","The terms acceptance is saved successfully, the modal closes, and the user can continue using the Home screen.","",""
+"SUB-012","Home / Navigation","Verify subscriber can open the drawer menu from Home screen
+Test Steps:
+1. Tap the menu or drawer icon","The drawer opens successfully and shows the expected navigation options.","",""
+"SUB-013","Home / Navigation","Verify subscriber can navigate to Profile from the drawer
+Test Steps:
+1. Open the drawer from the Home screen
+2. Tap the Profile option","The app routes the user to the Profile screen.","",""
+"SUB-014","Home / Navigation","Verify subscriber can navigate to Favorites from the drawer
+Test Steps:
+1. Open the drawer from the Home screen
+2. Tap the Favorites option","The app routes the user to the Favorites screen.","",""
+"SUB-015","Home / Navigation","Verify subscriber can navigate to Active Parking from the drawer
+Test Steps:
+1. Open the drawer from the Home screen
+2. Tap the Active Parking option","The app routes the user to the Active Parking screen.","",""
+"SUB-016","Home / Navigation","Verify subscriber can navigate to History from the drawer
+Test Steps:
+1. Open the drawer from the Home screen
+2. Tap the History option","The app routes the user to the History screen.","",""
+"SUB-017","Home / Navigation","Verify subscriber can switch app theme from the drawer
+Test Steps:
+1. Open the drawer from the Home screen
+2. Tap the theme toggle control","The app theme changes successfully according to the selected mode.","",""
+"SUB-018","Drawer / Logout","Verify subscriber can log out from the drawer
+Test Steps:
+1. Open the drawer from the Home screen
+2. Tap the Logout option","The user session is cleared and the app returns to the Login screen or unauthenticated flow.","",""
+"SUB-019","Home / Quick Booking Flow","Verify subscriber can open and close the frequent spots modal
+Test Steps:
+1. Open the frequent spots modal or section
+2. Tap the close action","The frequent spots modal closes successfully and the user remains on the Home screen.","",""
+"SUB-020","Home / Quick Booking Flow","Verify subscriber can start quick booking from frequently used spot
+Test Steps:
+1. Open the frequent spots modal or section from Home
+2. Tap the BOOK action for a frequent spot
+3. Select a compatible vehicle in the vehicle selection modal
+4. Tap Book Now","The quick booking is created successfully and the user is routed to the Active Parking screen.","",""
+"SUB-021","Home / Quick Booking Flow","Verify vehicle selection modal appears during frequent spot quick booking
+Test Steps:
+1. Open the frequent spots modal or section
+2. Tap the BOOK action for a frequent spot","The vehicle selection modal appears and shows the available compatible vehicles for booking.","",""
+"SUB-022","Home / Main Booking Flow","Verify subscriber can complete the main booking flow from registered vehicle to parking confirmation
+Test Steps:
+1. Select a registered vehicle from the Home screen vehicle section
+2. Choose a parking area from the available parking areas
+3. Proceed with the automatically assigned available compatible parking spot
+4. Tap Book Now to confirm the booking","The system uses the selected registered vehicle, assigns an available compatible parking spot automatically, creates the booking successfully, and routes the user to the Active Parking screen.","",""
+"SUB-023","Home / Main Booking Flow","Verify booking confirmation modal can be cancelled without creating a booking
+Test Steps:
+1. Select a registered vehicle from the Home screen vehicle section
+2. Choose a parking area from the available parking areas
+3. Proceed with the automatically assigned available compatible parking spot
+4. Tap Cancel or the close action on the booking confirmation modal","The booking confirmation modal closes and no booking is created.","",""
+"SUB-024","Home / Main Booking Flow","Verify booking is blocked when subscriber has insufficient balance
+Test Steps:
+1. Select a registered vehicle from the Home screen vehicle section
+2. Choose a parking area from the available parking areas
+3. Proceed with the automatically assigned available compatible parking spot
+4. Tap Book Now to confirm the booking","The app blocks the booking attempt and shows an insufficient balance modal.","",""
+"SUB-025","Home / Main Booking Flow","Verify subscriber can dismiss insufficient balance modal using Maybe Later
+Test Steps:
+1. Select a registered vehicle from the Home screen vehicle section
+2. Choose a parking area from the available parking areas
+3. Proceed with the automatically assigned available compatible parking spot
+4. Tap Book Now to confirm the booking
+5. Tap Maybe Later on the insufficient balance modal","The modal closes successfully and no booking or top-up flow is started.","",""
+"SUB-026","Home / Main Booking Flow","Verify subscriber can open Top Up screen from insufficient balance modal
+Test Steps:
+1. Select a registered vehicle from the Home screen vehicle section
+2. Choose a parking area from the available parking areas
+3. Proceed with the automatically assigned available compatible parking spot
+4. Tap Book Now to confirm the booking
+5. Tap View Plans on the insufficient balance modal","The app routes the user to the Top Up screen.","",""
+"SUB-027","Vehicles / Management","Verify subscriber can open Add Vehicle screen
+Test Steps:
+1. Navigate to the Add Vehicle option from the app flow
+2. Tap Add Vehicle","The Add Vehicle screen opens and displays the vehicle registration form.","",""
+"SUB-028","Vehicles / Management","Verify subscriber can add a vehicle with valid details
+Test Steps:
+1. Open the Add Vehicle screen
+2. Select a vehicle type
+3. Enter a valid plate number
+4. Enter the vehicle brand
+5. Enter the vehicle model
+6. Enter the vehicle color
+7. Submit the form","The vehicle is saved successfully and becomes available in the user's registered vehicles list.","",""
+"SUB-029","Vehicles / Management","Verify Add Vehicle form is blocked when required fields are incomplete
+Test Steps:
+1. Open the Add Vehicle screen
+2. Fill in only some of the required fields
+3. Leave at least one required field empty
+4. Tap the submit button","The app prevents submission and shows validation feedback for the missing required fields.","",""
+"SUB-030","Vehicles / Management","Verify subscriber can go back from Add Vehicle screen without submitting
+Test Steps:
+1. Open the Add Vehicle screen
+2. Tap the Go Back button","The user returns to the previous screen and no new vehicle is created.","",""
+"SUB-031","Vehicles / Management","Verify subscriber can view registered vehicles list
+Test Steps:
+1. Navigate to the Registered Vehicles screen","The Registered Vehicles screen loads successfully and displays the user's saved vehicles.","",""
+"SUB-032","Vehicles / Management","Verify subscriber can go back from Registered Vehicles screen
+Test Steps:
+1. Open the Registered Vehicles screen
+2. Tap the header back button","The user is returned to the previous screen successfully.","",""
+"SUB-033","Vehicles / Management","Verify subscriber can edit an existing vehicle
+Test Steps:
+1. Open the Registered Vehicles screen
+2. Tap the edit action for a vehicle
+3. Update one or more vehicle details
+4. Save the changes","The selected vehicle is updated successfully and the revised details are displayed.","",""
+"SUB-034","Vehicles / Management","Verify subscriber can delete a registered vehicle
+Test Steps:
+1. Open the Registered Vehicles screen
+2. Tap the delete action for a vehicle
+3. Confirm the deletion","The selected vehicle is deleted successfully and is removed from the list.","",""
+"SUB-035","Vehicles / Management","Verify vehicle is not deleted when delete confirmation is cancelled
+Test Steps:
+1. Open the Registered Vehicles screen
+2. Tap the delete action for a vehicle
+3. Tap Cancel in the confirmation modal","The modal closes and the vehicle remains in the registered vehicles list.","",""
+"SUB-036","Home / Main Booking Flow","Verify booking is blocked when subscriber has no registered vehicle
+Test Steps:
+1. Ensure the subscriber has no registered vehicle
+2. Attempt to start the main Home booking flow","The app prevents the booking attempt and informs the user that a vehicle must be added first.","",""
+"SUB-037","Home / Main Booking Flow","Verify booking is blocked when selected vehicle is incompatible with the parking spot
+Test Steps:
+1. Open the booking flow for a parking spot or area that has a different required vehicle type
+2. Select an incompatible registered vehicle
+3. Attempt to proceed with the booking","The app blocks the booking and shows a vehicle compatibility or mismatch message.","",""
+"SUB-038","Home / Main Booking Flow","Verify booking is blocked when selected spot is no longer available
+Test Steps:
+1. Select a registered vehicle from the Home screen vehicle section
+2. Choose a parking area from the available parking areas
+3. Proceed until an available parking spot is assigned
+4. Attempt to confirm the booking after the assigned spot becomes unavailable","The app does not create the booking and shows an unavailable spot error message.","",""
+"SUB-039","Home / Main Booking Flow","Verify booking is blocked when subscriber already has an active booking
+Test Steps:
+1. Ensure the subscriber already has an active or reserved booking
+2. Start another booking from the Home booking flow","The app prevents multiple active bookings and shows the appropriate warning or error message.","",""
+"SUB-040","Active Parking / Session","Verify Active Parking screen shows reservation details after successful booking
+Test Steps:
+1. Complete a successful booking
+2. Open the Active Parking screen","The Active Parking screen displays the reservation details for the newly created booking.","",""
+"SUB-041","Active Parking / Session","Verify subscriber can switch between ticket, layout, and timer views
+Test Steps:
+1. Open the Active Parking screen
+2. Navigate between the ticket, parking layout, and timer sections","Each section loads successfully and displays the correct active parking information.","",""
+"SUB-042","Active Parking / Session","Verify QR code is shown for active reservation or session
+Test Steps:
+1. Open the Active Parking screen","The QR code is displayed for attendant scanning.","",""
+"SUB-043","Active Parking / Session","Verify subscriber can refresh parking layout in Active Parking
+Test Steps:
+1. Open the Active Parking screen
+2. Navigate to the parking layout section
+3. Tap the Refresh button","The layout refresh is triggered successfully and the parking layout data reloads.","",""
+"SUB-044","Active Parking / Session","Verify subscriber can add current parking location to Favorites from Active Parking
+Test Steps:
+1. Open the Active Parking screen
+2. Tap Add to Favorites","The current parking spot or section is saved successfully to Favorites.","",""
+"SUB-045","Active Parking / Session","Verify subscriber can return to Home from Active Parking
+Test Steps:
+1. Open the Active Parking screen
+2. Tap Go Back to Home","The app returns the user to the Home flow correctly.","",""
+"SUB-046","Active Parking / Session","Verify subscriber can retry loading Active Parking data after load failure
+Test Steps:
+1. Trigger an Active Parking load failure condition
+2. Open the Active Parking screen
+3. Tap Try Again","The app attempts to reload the active parking data successfully.","",""
+"SUB-047","Active Parking / Session","Verify grace-period warning modal can be dismissed without breaking the session flow
+Test Steps:
+1. Trigger the grace-period warning modal during an active parking session
+2. Tap the dismiss or close action","The warning modal closes successfully and the active parking flow continues normally.","",""
+"SUB-048","Active Parking / Session","Verify end-of-session summary is shown after parking session ends
+Test Steps:
+1. Complete a parking session until it ends
+2. Open the end-of-session summary","The user sees the end-of-session summary including duration, deducted amount, and remaining balance.","",""
+"SUB-049","Favorites / Management","Verify subscriber can view Favorites list
+Test Steps:
+1. Open the Favorites screen","The Favorites screen loads successfully and displays the user's saved favorite spots.","",""
+"SUB-050","Favorites / Management","Verify subscriber can remove a favorite spot
+Test Steps:
+1. Open the Favorites screen
+2. Tap the remove action for a favorite spot
+3. Confirm the action if prompted","The selected favorite spot is removed successfully from the Favorites list.","",""
+"SUB-051","Favorites / Favorite Rebooking Flow","Verify subscriber can rebook from a favorite spot
+Test Steps:
+1. Open the Favorites screen
+2. Tap the booking or rebook action for a favorite
+3. Select a compatible vehicle
+4. Tap Book Now","The rebooking is submitted successfully and the app routes the user to the Active Parking screen.","",""
+"SUB-052","Favorites / Management","Verify subscriber can switch Favorites display between list and grid view
+Test Steps:
+1. Open the Favorites screen
+2. Tap the list or grid view toggle","The Favorites screen updates correctly according to the selected list or grid layout.","",""
+"SUB-053","Favorites / Management","Verify subscriber can use Favorites pagination controls
+Test Steps:
+1. Open the Favorites screen
+2. Tap the Next page control
+3. Tap the Previous page control","The user can navigate between favorite pages correctly.","",""
+"SUB-054","Favorites / Management","Verify subscriber can use scroll-to-top control on Favorites screen
+Test Steps:
+1. Open the Favorites screen
+2. Scroll down the list
+3. Tap the scroll-to-top floating button","The Favorites list returns to the top correctly.","",""
+"SUB-055","Favorites / Favorite Rebooking Flow","Verify subscriber can close the vehicle selection modal during favorite rebooking
+Test Steps:
+1. Open the Favorites screen
+2. Tap the booking or rebook action for a favorite
+3. Tap the close action on the vehicle selection modal","The vehicle selection modal closes and no booking is created.","",""
+"SUB-056","Favorites / Favorite Rebooking Flow","Verify selected vehicle is applied during favorite rebooking
+Test Steps:
+1. Open the Favorites screen
+2. Tap the booking or rebook action for a favorite
+3. Select one compatible vehicle option","The selected vehicle is highlighted and applied to the rebooking flow.","",""
+"SUB-057","Favorites / Favorite Rebooking Flow","Verify mismatch modal can be dismissed during favorite rebooking
+Test Steps:
+1. Open the Favorites screen
+2. Tap the booking or rebook action for a favorite that will trigger a mismatch condition
+3. Select the incompatible vehicle if the vehicle selection modal appears
+4. Tap the close action or Got it on the mismatch modal","The mismatch modal is dismissed successfully and no invalid booking is created.","",""
+"SUB-058","History / Management","Verify subscriber can view parking history records
+Test Steps:
+1. Open the History screen","The History screen loads successfully and displays previous parking sessions.","",""
+"SUB-059","History / Management","Verify subscriber can search parking history
+Test Steps:
+1. Open the History screen
+2. Enter a keyword in the search field","The history list updates and shows only records matching the entered search term.","",""
+"SUB-060","History / Management","Verify subscriber can filter parking history using custom date range
+Test Steps:
+1. Open the History screen
+2. Open the custom date range modal
+3. Select a valid date range
+4. Tap Apply","The history list refreshes and displays records within the selected date range.","",""
+"SUB-061","History / Management","Verify subscriber can clear custom date filter on History screen
+Test Steps:
+1. Open the History screen
+2. Open the custom date range modal
+3. Tap Clear","The selected custom date filter values are cleared successfully.","",""
+"SUB-062","History / Management","Verify subscriber can close the custom date modal on History screen
+Test Steps:
+1. Open the History screen
+2. Open the custom date range modal
+3. Tap the close action","The custom date modal closes successfully without breaking the History flow.","",""
+"SUB-063","History / Management","Verify subscriber can open and close reservation details from History
+Test Steps:
+1. Open the History screen
+2. Tap a record to view reservation details
+3. Tap the close action in the details modal","The reservation details modal opens successfully and closes back to the History list normally.","",""
+"SUB-064","History / History Rebooking Flow","Verify subscriber can rebook from History
+Test Steps:
+1. Open the History screen
+2. Tap Book Again on a history record
+3. Select a compatible vehicle
+4. Tap Book Now","The rebooking request succeeds and the user is routed to the Active Parking screen.","",""
+"SUB-065","History / Management","Verify subscriber can add a History item to Favorites
+Test Steps:
+1. Open the History screen
+2. Tap the favorite action for a record","The selected history location is added successfully to Favorites.","",""
+"SUB-066","History / Management","Verify subscriber can delete a History record
+Test Steps:
+1. Open the History screen
+2. Tap the delete action for a record
+3. Confirm the deletion if prompted","The selected history record is removed successfully from the displayed list.","",""
+"SUB-067","History / Management","Verify subscriber can switch History display between list and grid view
+Test Steps:
+1. Open the History screen
+2. Tap the list or grid view toggle","The History display changes correctly according to the selected view mode.","",""
+"SUB-068","History / Management","Verify subscriber can use History pagination controls
+Test Steps:
+1. Open the History screen
+2. Tap Next page
+3. Tap Previous page","The user can navigate through history pages correctly.","",""
+"SUB-069","History / Management","Verify subscriber can use scroll-to-top control on History screen
+Test Steps:
+1. Open the History screen
+2. Scroll down the list
+3. Tap the scroll-to-top floating button","The History list returns to the top correctly.","",""
+"SUB-070","History / History Rebooking Flow","Verify subscriber can close the vehicle selection modal during History rebooking
+Test Steps:
+1. Open the History screen
+2. Tap Book Again on a history record
+3. Tap the close action on the vehicle selection modal","The vehicle selection modal closes and no booking is created.","",""
+"SUB-071","History / History Rebooking Flow","Verify selected vehicle is applied during History rebooking
+Test Steps:
+1. Open the History screen
+2. Tap Book Again on a history record
+3. Select one compatible vehicle option","The selected vehicle is highlighted and applied to the rebooking flow.","",""
+"SUB-072","History / History Rebooking Flow","Verify mismatch modal can be dismissed during History rebooking
+Test Steps:
+1. Open the History screen
+2. Tap Book Again on a history record that will trigger a mismatch condition
+3. Select the incompatible vehicle if the vehicle selection modal appears
+4. Tap the close action or Got it on the mismatch modal","The mismatch modal is dismissed successfully and no invalid booking is created.","",""
+"SUB-073","Balance / Transactions","Verify subscriber can view balance summary and transaction history
+Test Steps:
+1. Open the Balance screen","The Balance screen displays the current remaining balance and transaction history successfully.","",""
+"SUB-074","Balance / Transactions","Verify subscriber can search transactions on Balance screen
+Test Steps:
+1. Open the Balance screen
+2. Enter a keyword in the search field","The transaction list updates and shows records matching the entered search term.","",""
+"SUB-075","Balance / Transactions","Verify subscriber can filter Balance transactions by type
+Test Steps:
+1. Open the Balance screen
+2. Tap All
+3. Tap + Tokens
+4. Tap - Tokens","The transaction list filters correctly according to the selected transaction type.","",""
+"SUB-076","Balance / Transactions","Verify subscriber can filter Balance transactions by date options
+Test Steps:
+1. Open the Balance screen
+2. Apply one or more available date filters such as Last 7 Days, This Month, This Year, Last Year, or Custom Range","The transaction list refreshes and shows only transactions within the selected date range.","",""
+"SUB-077","Balance / Transactions","Verify subscriber can use Balance pagination controls
+Test Steps:
+1. Open the Balance screen
+2. Tap Next page
+3. Tap Previous page","The user can navigate between transaction pages correctly.","",""
+"SUB-078","Balance / Transactions","Verify subscriber can use scroll-to-top control on Balance screen
+Test Steps:
+1. Open the Balance screen
+2. Scroll down the transaction list
+3. Tap the scroll-to-top floating button","The transaction list returns to the top correctly.","",""
+"SUB-079","Balance / Transactions","Verify subscriber can open, clear, and apply custom date filter on Balance screen
+Test Steps:
+1. Open the Balance screen
+2. Open the custom date modal
+3. Tap Clear
+4. Set a new custom date range
+5. Tap Apply","The custom date modal works correctly, clears previous values, and refreshes the transaction list using the selected range.","",""
+"SUB-080","Top Up / PayPal","Verify subscriber can open Top Up screen from Balance screen
+Test Steps:
+1. Open the Balance screen
+2. Tap the top up or view plans option","The app routes the user to the Top Up screen and displays the available plans.","",""
+"SUB-081","Top Up / PayPal","Verify subscriber can go back from Top Up screen
+Test Steps:
+1. Open the Top Up screen
+2. Tap the header back button","The user returns to the previous screen successfully.","",""
+"SUB-082","Top Up / PayPal","Verify subscriber can start a top-up purchase
+Test Steps:
+1. Open the Top Up screen
+2. Select an available subscription plan
+3. Confirm the selection in the confirmation modal","The app starts the PayPal payment flow successfully.","",""
+"SUB-083","Top Up / PayPal","Verify subscriber can close the purchase confirmation modal
+Test Steps:
+1. Open the Top Up screen
+2. Select an available subscription plan
+3. Tap the close action on the purchase confirmation modal","The purchase confirmation modal closes successfully and no payment starts.","",""
+"SUB-084","Top Up / PayPal","Verify subscriber can cancel top-up before payment starts
+Test Steps:
+1. Open the Top Up screen
+2. Select an available subscription plan
+3. Tap Cancel on the purchase confirmation modal","The confirmation modal closes and the payment flow does not start.","",""
+"SUB-085","Top Up / PayPal","Verify successful PayPal payment updates the subscriber balance
+Test Steps:
+1. Open the Top Up screen
+2. Select a plan and confirm the purchase
+3. Complete the PayPal payment successfully
+4. Return to the app and review the balance","The payment is captured successfully and the user's balance is updated.","",""
+"SUB-086","Top Up / PayPal","Verify cancelled PayPal payment does not update the subscriber balance
+Test Steps:
+1. Open the Top Up screen
+2. Select a plan and confirm the purchase
+3. Cancel the PayPal payment before completion
+4. Return to the app and review the balance","The purchase is not applied and the user's balance remains unchanged.","",""
+"SUB-087","Top Up / PayPal","Verify subscriber can close PayPal modal safely
+Test Steps:
+1. Open the Top Up screen
+2. Start the PayPal payment flow
+3. Close the PayPal modal or WebView before successful completion","The PayPal modal closes safely and the app remains stable without applying the purchase.","",""
+"SUB-088","Profile / Account","Verify subscriber can view profile information
+Test Steps:
+1. Navigate to the Profile screen","The Profile screen loads successfully and shows the user's profile details and available actions.","",""
+"SUB-089","Profile / Account","Verify subscriber can open Change Password screen from Profile
+Test Steps:
+1. Open the Profile screen
+2. Tap Change Password","The Change Password screen opens successfully.","",""
+"SUB-090","Profile / Account","Verify subscriber can open Registered Vehicles from Profile
+Test Steps:
+1. Open the Profile screen
+2. Tap Registered Vehicles","The app routes the user to the Registered Vehicles screen.","",""
+"SUB-091","Profile / Account","Verify subscriber can open Terms and Conditions screen from Profile
+Test Steps:
+1. Open the Profile screen
+2. Tap Terms and Conditions","The Terms and Conditions screen opens successfully and displays the full terms content.","",""
+"SUB-092","Profile / Account","Verify subscriber can open FAQ screen from Profile
+Test Steps:
+1. Open the Profile screen
+2. Tap FAQ","The FAQ screen opens successfully and displays the help information.","",""
+"SUB-093","Profile / Account","Verify subscriber can cancel profile picture options without changing the profile image
+Test Steps:
+1. Open the Profile screen
+2. Open the profile picture options modal
+3. Tap Cancel","The modal closes successfully and the current profile picture remains unchanged.","",""
+"SUB-094","Feedback / Ratings","Verify subscriber can open Rate Us modal from Profile
+Test Steps:
+1. Open the Profile screen
+2. Tap Rate Us","The rating modal opens successfully.","",""
+"SUB-095","Feedback / Ratings","Verify subscriber can close Rate Us modal using the close button
+Test Steps:
+1. Open the Profile screen
+2. Tap Rate Us
+3. Tap the close icon in the modal","The rating modal closes successfully and no feedback is submitted.","",""
+"SUB-096","Feedback / Ratings","Verify subscriber can cancel Rate Us modal without submitting feedback
+Test Steps:
+1. Open the Profile screen
+2. Tap Rate Us
+3. Tap Cancel in the rating modal","The modal closes successfully and the feedback input is not submitted.","",""
+"SUB-097","Feedback / Ratings","Verify subscriber can select a star rating from 1 to 5
+Test Steps:
+1. Open the Profile screen
+2. Tap Rate Us
+3. Tap different star values from 1 through 5","The selected rating updates correctly according to the star chosen.","",""
+"SUB-098","Feedback / Ratings","Verify subscriber can submit feedback with rating and optional comment
+Test Steps:
+1. Open the Profile screen
+2. Tap Rate Us
+3. Select a star rating
+4. Enter an optional comment
+5. Submit the feedback","The feedback is submitted successfully and the app shows a success confirmation.","",""
+"SUB-099","Feedback / Ratings","Verify subscriber can view submitted feedback history
+Test Steps:
+1. Open the My Feedback screen from Profile","The My Feedback screen loads successfully and displays the submitted feedback history.","",""
+"SUB-100","Feedback / Ratings","Verify subscriber can search submitted feedback history
+Test Steps:
+1. Open the My Feedback screen
+2. Enter a keyword in the search field","The feedback list updates and shows records matching the entered search term.","",""
+"SUB-101","Feedback / Ratings","Verify subscriber can use date filtering on My Feedback screen
+Test Steps:
+1. Open the My Feedback screen
+2. Apply a date filter","The feedback history updates correctly according to the selected date filter.","",""
+"SUB-102","Feedback / Ratings","Verify subscriber can switch My Feedback display between list and grid view
+Test Steps:
+1. Open the My Feedback screen
+2. Tap the list or grid toggle","The My Feedback display changes correctly according to the selected view mode.","",""
+"SUB-103","Feedback / Ratings","Verify subscriber can open and close feedback details or reply history
+Test Steps:
+1. Open the My Feedback screen
+2. Tap a feedback item to view details or reply history
+3. Tap the close action","The feedback details view opens successfully and closes back to the feedback list normally.","",""
+"SUB-104","Feedback / Ratings","Verify subscriber can retry loading My Feedback after load failure
+Test Steps:
+1. Trigger a My Feedback load failure condition
+2. Open the My Feedback screen
+3. Tap Retry","The app attempts to reload the feedback list successfully.","",""
+"SUB-105","Feedback / Ratings","Verify subscriber can return to Profile from My Feedback empty state
+Test Steps:
+1. Open the My Feedback screen
+2. Tap Go to Profile","The app returns the user to the Profile screen.","",""
+"SUB-106","Feedback / Ratings","Verify subscriber can use scroll-to-top control on My Feedback screen
+Test Steps:
+1. Open the My Feedback screen
+2. Scroll down the list
+3. Tap the scroll-to-top control","The feedback list returns to the top correctly.","",""

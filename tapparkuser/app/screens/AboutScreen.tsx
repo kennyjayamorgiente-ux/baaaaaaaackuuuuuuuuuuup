@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   StyleSheet,
   Dimensions,
 } from 'react-native';
@@ -13,50 +12,57 @@ import { SvgXml } from 'react-native-svg';
 import { tapParkLogoSvg, darkTapParkLogoSvg } from '../assets/icons/index2';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme, useThemeColors } from '../../contexts/ThemeContext';
+import ApiService from '../../services/api';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function AboutScreen() {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const colors = useThemeColors();
   const { isDarkMode } = useTheme();
   const styles = createStyles(colors);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const handleNext = () => {
-    // Navigate to home screen after signup/about
-    // User should already be authenticated from signup flow
-    console.log('🎯 AboutScreen: Navigating to HomeScreen, user authenticated:', isAuthenticated);
-    router.replace('/screens/HomeScreen');
+  const handleNext = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await ApiService.completeAboutOnboarding();
+    } catch (error) {
+      console.error('AboutScreen: Failed to persist onboarding completion:', error);
+    } finally {
+      console.log('AboutScreen: Navigating to HomeScreen, user authenticated:', isAuthenticated);
+      router.replace('/screens/HomeScreen');
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Background with subtle gradient effect */}
       <View style={styles.gradientBackground} />
-      
-      {/* Top Section - TapPark Logo */}
+
       <View style={styles.topSection}>
         <View style={styles.logoContainer}>
           <View style={styles.logoShadow}>
-            <SvgXml 
-              xml={isDarkMode ? darkTapParkLogoSvg : tapParkLogoSvg} 
-              width={getResponsiveSize(100)} 
-              height={getResponsiveSize(137)} 
+            <SvgXml
+              xml={isDarkMode ? darkTapParkLogoSvg : tapParkLogoSvg}
+              width={getResponsiveSize(100)}
+              height={getResponsiveSize(137)}
             />
           </View>
         </View>
       </View>
 
-      {/* Main Content */}
       <View style={styles.mainContent}>
-        {/* Title Section */}
         <View style={styles.titleSection}>
           <Text style={styles.mainTitle}>PARKING</Text>
           <Text style={styles.subTitle}>made easy!</Text>
           <View style={styles.titleUnderline} />
         </View>
 
-        {/* About App Card */}
         <View style={styles.aboutCard}>
           <View style={styles.cardInnerContent}>
             <View style={styles.cardHeader}>
@@ -65,15 +71,15 @@ export default function AboutScreen() {
               </View>
               <Text style={styles.aboutTitle}>About App</Text>
             </View>
-            
+
             <View style={styles.cardContent}>
               <Text style={styles.aboutText}>
-                TapPark is an innovative parking reservation system designed specifically for Foundation University. 
+                TapPark is an innovative parking reservation system designed specifically for Foundation University.
                 Our app revolutionizes the way students, faculty, and visitors find and reserve parking spaces on campus.
               </Text>
               <Text style={styles.aboutText}>
-                With real-time QR code scanning and IoT sensors to show available parking spots instantly, 
-                users can reserve parking in advance, reducing congestion and delays. This creates a more 
+                With real-time QR code scanning and IoT sensors to show available parking spots instantly,
+                users can reserve parking in advance, reducing congestion and delays. This creates a more
                 organized and efficient parking experience for everyone on campus.
               </Text>
             </View>
@@ -81,11 +87,11 @@ export default function AboutScreen() {
         </View>
       </View>
 
-      {/* Arrow Button - Overlapping the card */}
       <View style={styles.arrowButtonContainer}>
-        <TouchableOpacity 
-          style={styles.arrowButton} 
+        <TouchableOpacity
+          style={[styles.arrowButton, isSubmitting && styles.arrowButtonDisabled]}
           onPress={handleNext}
+          disabled={isSubmitting}
           activeOpacity={0.8}
         >
           <View style={styles.arrowButtonInner}>
@@ -97,7 +103,6 @@ export default function AboutScreen() {
   );
 }
 
-// Enhanced responsive calculations
 const isSmallScreen = screenWidth < 375;
 const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
 const isLargeScreen = screenWidth >= 414 && screenWidth < 768;
@@ -318,15 +323,16 @@ const createStyles = (colors: any) => StyleSheet.create({
       width: 0,
       height: 6,
     },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
   },
+  arrowButtonDisabled: {
+    opacity: 0.7,
+  },
   arrowButtonInner: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: colors.button,
-    alignItems: 'center',
+    flex: 1,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
-    borderRadius: getResponsiveSize(32),
+    alignItems: 'center',
   },
 });

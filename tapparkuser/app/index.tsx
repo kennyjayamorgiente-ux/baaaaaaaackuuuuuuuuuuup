@@ -25,6 +25,8 @@ export default function Index() {
         // User is authenticated, redirect to appropriate screen based on user type
         if (user?.account_type_name === 'Attendant') {
           router.replace('/attendant-screen/DashboardScreen');
+        } else if (user?.has_seen_about === false || user?.has_seen_about === undefined) {
+          router.replace('/screens/AboutScreen');
         } else {
           router.replace('/screens/HomeScreen');
         }

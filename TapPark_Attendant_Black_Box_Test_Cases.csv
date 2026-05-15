@@ -1,0 +1,187 @@
+"Test Case ID","Module/Function","Test Scenario/Steps","Expected Results","Pass","Remarks"
+"ATT-001","Authentication / Startup Routing","Verify authenticated attendant is redirected to Dashboard screen
+Test Steps:
+1. Ensure a valid attendant session already exists
+2. Launch the TapPark app","The app validates the stored session successfully and routes the attendant directly to the Dashboard screen.","",""
+"ATT-002","Authentication / Login","Verify attendant can log in with valid credentials
+Test Steps:
+1. Enter a valid attendant ID number, email, or accepted identifier
+2. Enter the correct password
+3. Tap the Login button","The login request succeeds and the app routes the attendant to the Dashboard screen.","",""
+"ATT-003","Authentication / Login","Verify login is blocked when required fields are incomplete
+Test Steps:
+1. Leave the ID Number field empty
+2. Enter any password
+3. Tap the Login button
+4. Enter a sample or valid attendant ID number
+5. Leave the password field empty
+6. Tap the Login button","The app prevents submission and shows the correct validation message when the ID Number field is empty and when the password field is empty.","",""
+"ATT-004","Authentication / Login","Verify attendant login fails with invalid credentials
+Test Steps:
+1. Enter an invalid or unregistered attendant ID number
+2. Enter an incorrect password
+3. Tap the Login button","The app does not log in the attendant and displays an authentication error message.","",""
+"ATT-005","Authentication / Login","Verify Remember Me toggle can be changed for attendant login
+Test Steps:
+1. Locate the Remember Me option
+2. Tap the Remember Me toggle once
+3. Tap the Remember Me toggle again","The Remember Me control changes state correctly each time it is tapped.","",""
+"ATT-006","Dashboard / Operations","Verify attendant can view dashboard overview after login","The Dashboard screen loads successfully and displays slot, section, and activity-related information.","",""
+"ATT-007","Dashboard / Operations","Verify attendant can open settings or account modal from dashboard
+Test Steps:
+1. Tap the attendant profile or name area","The settings or account modal opens successfully and displays attendant account information.","",""
+"ATT-008","Dashboard / Operations","Verify attendant can open activity history from dashboard
+Test Steps:
+1. Tap the activity history icon or control","The activity history modal opens successfully.","",""
+"ATT-009","Dashboard / Operations","Verify attendant can switch dashboard slot view between list and grid
+Test Steps:
+1. Open the Dashboard screen
+2. Tap the list or grid view toggle","The dashboard updates the slot presentation according to the selected view mode.","",""
+"ATT-010","Dashboard / Operations","Verify attendant can filter dashboard by vehicle type
+Test Steps:
+1. Open the Dashboard screen
+2. Select a vehicle type filter","The displayed slot list or grid updates according to the selected vehicle type.","",""
+"ATT-011","Dashboard / Operations","Verify attendant can close the activity history modal
+Test Steps:
+1. Open the activity history modal from the Dashboard screen
+2. Tap the close action","The activity history modal closes successfully.","",""
+"ATT-012","Dashboard / Operations","Verify attendant can filter activity history by status
+Test Steps:
+1. Open the activity history modal
+2. Change the status filter","The activity history list updates according to the selected status filter.","",""
+"ATT-013","Dashboard / Settings","Verify attendant can close settings modal
+Test Steps:
+1. Open the settings or account modal from the Dashboard screen
+2. Tap the close action","The settings modal closes successfully.","",""
+"ATT-014","Dashboard / Settings","Verify attendant can log out from settings modal
+Test Steps:
+1. Open the settings or account modal from the Dashboard screen
+2. Tap Log Out","The attendant session is cleared and the app returns to the Login screen or unauthenticated flow.","",""
+"ATT-015","Dashboard / Operations","Verify attendant can open slot details from the dashboard
+Test Steps:
+1. Open the Dashboard screen
+2. Tap an available, reserved, or occupied slot","The slot details modal or panel opens successfully and shows the selected slot information.","",""
+"ATT-016","Dashboard / Operations","Verify attendant can close the attendant action modal using Cancel
+Test Steps:
+1. Open a slot action modal from the Dashboard screen
+2. Tap Cancel","The action modal closes successfully and no slot action is applied.","",""
+"ATT-017","Dashboard / Section Control","Verify attendant cannot mark a spot as unavailable without entering a reason
+Test Steps:
+1. Open a spot that is currently available
+2. Select the Set as Unavailable action
+3. Leave the reason field empty
+4. Tap Confirm Unavailable","The app prevents the update and shows an error requiring a reason before the spot can be marked unavailable.","",""
+"ATT-018","Dashboard / Section Control","Verify attendant can mark a spot as unavailable with a reason
+Test Steps:
+1. Open a spot that is currently available
+2. Select the Set as Unavailable action
+3. Enter a reason for unavailability
+4. Tap Confirm Unavailable","The selected spot is marked as unavailable successfully and the reason is stored for that spot.","",""
+"ATT-019","Dashboard / Section Control","Verify attendant can mark a spot as available
+Test Steps:
+1. Open a spot that is currently unavailable
+2. Select the Set as Available action","The selected spot is marked as available successfully.","",""
+"ATT-020","Dashboard / Guest Booking","Verify attendant can open guest booking flow from slot actions
+Test Steps:
+1. Open an available slot from the Dashboard screen
+2. Tap Book Guest Parking","The guest booking modal opens successfully for the selected parking spot.","",""
+"ATT-021","Dashboard / Guest Booking","Verify guest booking form displays the complete guest booking fields
+Test Steps:
+1. Open an available slot from the Dashboard screen
+2. Tap Book Guest Parking","The guest booking form displays First Name, Last Name, Plate Number, auto-detected Vehicle Type, optional Brand, optional Model, optional Color, Cancel, and Create Booking.","",""
+"ATT-022","Dashboard / Guest Booking","Verify guest booking is blocked when required guest fields are incomplete
+Test Steps:
+1. Open an available slot from the Dashboard screen
+2. Tap Book Guest Parking
+3. Leave First Name empty and tap Create Booking
+4. Enter First Name and leave Last Name empty, then tap Create Booking
+5. Enter Last Name and leave Plate Number empty, then tap Create Booking","The app prevents booking submission and shows the correct validation message for each missing required field.","",""
+"ATT-023","Dashboard / Guest Booking","Verify duplicate plate number warning is shown in guest booking form
+Test Steps:
+1. Open an available slot from the Dashboard screen
+2. Tap Book Guest Parking
+3. Enter a plate number that already exists in the system","The form shows a duplicate plate number warning and indicates that the existing vehicle record will be used.","",""
+"ATT-024","Dashboard / Guest Booking","Verify attendant can cancel guest booking without creating a booking
+Test Steps:
+1. Open an available slot from the Dashboard screen
+2. Tap Book Guest Parking
+3. Tap Cancel","The guest booking modal closes and no guest booking is created.","",""
+"ATT-025","Dashboard / Guest Booking","Verify attendant can create a guest booking for a regular parking spot
+Test Steps:
+1. Open an available regular parking spot from the Dashboard screen
+2. Tap Book Guest Parking
+3. Enter guest first name
+4. Enter guest last name
+5. Enter plate number
+6. Enter optional brand, model, and color if needed
+7. Tap Create Booking","The guest booking is created successfully for the selected regular parking spot and the slot status updates accordingly.","",""
+"ATT-026","Dashboard / Guest Booking","Verify attendant can create a guest booking for a motorcycle or bike capacity section spot
+Test Steps:
+1. Open an available motorcycle or bike section spot from the Dashboard screen
+2. Tap Book Guest Parking
+3. Enter guest first name
+4. Enter guest last name
+5. Enter plate number
+6. Enter optional brand, model, and color if needed
+7. Tap Create Booking","The guest booking is created successfully for the selected capacity-based section spot and the spot status updates accordingly.","",""
+"ATT-027","Dashboard / Section Control","Verify attendant can close section settings modal
+Test Steps:
+1. Open a section settings modal from the Dashboard screen
+2. Tap the close action","The section settings modal closes successfully.","",""
+"ATT-028","Dashboard / Section Control","Verify attendant cannot mark a section as unavailable without entering a reason
+Test Steps:
+1. Open the settings for an available section
+2. Select Set as Unavailable
+3. Leave the reason field empty
+4. Tap Confirm Unavailable","The app prevents the update and shows an error requiring a reason before the section can be marked unavailable.","",""
+"ATT-029","Dashboard / Section Control","Verify attendant can mark a section as unavailable with a reason
+Test Steps:
+1. Open the settings for an available section
+2. Select Set as Unavailable
+3. Enter a reason for unavailability
+4. Tap Confirm Unavailable","The selected section is marked as unavailable successfully and the reason is stored for that section.","",""
+"ATT-030","Dashboard / Section Control","Verify attendant can mark a section as available
+Test Steps:
+1. Open the settings for an unavailable section
+2. Select Set as Available","The selected section is marked as available successfully.","",""
+"ATT-031","Dashboard / Session Management","Verify attendant can manually end an active parking session from slot details
+Test Steps:
+1. Open a slot that currently has an active session
+2. Select the End Parking action
+3. Confirm the action if prompted","The active parking session is ended successfully and the slot status updates.","",""
+"ATT-032","Dashboard / Session Management","Verify attendant can manually cancel a reserved booking from slot details
+Test Steps:
+1. Open a slot that currently has a reserved booking
+2. Select the Cancel Reservation action
+3. Confirm the action if prompted","The reservation is cancelled successfully and the slot status updates.","",""
+"ATT-033","QR Scanner / Operations","Verify attendant can open QR Scanner from dashboard
+Test Steps:
+1. Open the Dashboard screen
+2. Tap the QR scanner shortcut","The app opens the QR Scanner screen successfully.","",""
+"ATT-034","QR Scanner / Operations","Verify app requests camera permission when opening QR Scanner without permission
+Test Steps:
+1. Ensure camera permission is not granted for the app
+2. Open the QR Scanner screen
+3. Tap Grant Permission if shown","The app requests camera permission correctly before scanner use.","",""
+"ATT-035","QR Scanner / Operations","Verify attendant can return from QR permission state using Go Back
+Test Steps:
+1. Open the QR Scanner screen while camera permission is not granted
+2. Tap Go Back","The app returns the user to the Dashboard screen successfully.","",""
+"ATT-036","QR Scanner / Operations","Verify attendant can close the QR Scanner screen and return to dashboard
+Test Steps:
+1. Open the QR Scanner screen
+2. Tap the close or back button in scanner view","The app returns the user to the Dashboard screen successfully.","",""
+"ATT-037","QR Scanner / Operations","Verify attendant can start a parking session by scanning a valid reservation QR code
+Test Steps:
+1. Open the QR Scanner screen
+2. Select start mode if applicable
+3. Scan a valid reservation QR code","The backend validates the QR code successfully and starts the parking session.","",""
+"ATT-038","QR Scanner / Operations","Verify attendant can end a parking session by scanning a valid active-session QR code
+Test Steps:
+1. Open the QR Scanner screen
+2. Select end mode if applicable
+3. Scan a valid active-session QR code","The backend validates the QR code successfully and ends the parking session with the correct result.","",""
+"ATT-039","QR Scanner / Operations","Verify invalid QR code is rejected by the scanner flow
+Test Steps:
+1. Open the QR Scanner screen
+2. Scan an invalid, expired, or unsupported QR code","The app does not process the request and shows an appropriate error message.","",""

@@ -2,7 +2,7 @@
                     TAPPARK COMPLETE APPLICATION FLOW DOCUMENT
 ================================================================================
 
-Last repo review date: 2026-05-08
+Last repo review date: 2026-05-14
 Checked codebases:
 - Mobile app: `tapparkuser`
 - Backend API: `tapparkuser-backend`
@@ -65,8 +65,11 @@ Purpose of this document:
 - Authenticated regular user/admin -> `HomeScreen`
 
 [IMPLEMENTED] Splash flow
-- Splash screen shows while auth state is loading
-- Splash redirects to login if not authenticated
+- Splash screen is shown while auth state is loading
+- `index.tsx` is the auth gate
+- If unauthenticated, `index.tsx` routes to `Splash1Screen`
+- `Splash1Screen` then performs a timed redirect to `LoginScreen`
+- `Splash1Screen` itself does not validate authentication
 
 ================================================================================
                            2. SCREEN INVENTORY
@@ -74,12 +77,9 @@ Purpose of this document:
 
 2.1 USER-RELATED SCREENS FOUND
 
-[IMPLEMENTED] Main user screens found in `tapparkuser/app/screens`
+[IMPLEMENTED] Reachable user screens in the current app flow
 - `Splash1Screen`
-- `GreetingsScreen`
 - `LoginScreen`
-- `SignupScreen`
-- `AboutScreen`
 - `HomeScreen`
 - `ActiveParkingScreen`
 - `FavoritesScreen`
@@ -93,14 +93,20 @@ Purpose of this document:
 - `FAQScreen`
 - `MyFeedbackScreen`
 
-[IMPLEMENTED] Additional user screens present in the repo
+[PARTIAL] Screen assets present in the repo but not part of the current reachable flow
+- `GreetingsScreen`
+- `SignupScreen`
+- `AboutScreen`
 - `FeedbackScreen`
 - `SubscriptionPlansScreen`
 - `HomeScreenFixed`
 
 Note:
-- These are present and usable as code assets/screens.
-- They are not all part of the cleanest primary user path, but they do exist in the current app codebase.
+- The first list reflects screens that are currently reachable through the app's active navigation flow.
+- The second list reflects screen files that exist in the repo but are not currently linked into the normal user path.
+- `GreetingsScreen` is still registered in navigation, but no active route sends users there.
+- `SignupScreen` is currently only linked from `GreetingsScreen`, so it is not part of the default reachable flow.
+- `AboutScreen` is currently only linked from `SignupScreen`, so it is also outside the default reachable flow.
 
 [IMPLEMENTED] Separate user profile route
 - `ProfileScreen`
@@ -119,14 +125,16 @@ Note:
 
 [IMPLEMENTED] First open
 1. App launches
-2. Splash checks token/auth state
-3. User is routed to login path if not authenticated
+2. `AuthProvider` initializes stored token
+3. `AuthProvider` checks auth state through profile fetch
+4. `index.tsx` routes unauthenticated users to `Splash1Screen`
+5. `Splash1Screen` redirects to `LoginScreen`
 
-[IMPLEMENTED] Greetings flow
-1. User lands on `GreetingsScreen`
-2. User chooses:
-   - Login
-   - Signup
+[MISSING] Reachable greetings/signup onboarding flow
+- `GreetingsScreen` exists but is not part of the current startup path
+- `SignupScreen` is only reachable from `GreetingsScreen`
+- `AboutScreen` is only reachable from `SignupScreen`
+- Current unauthenticated startup behavior sends users to `LoginScreen`, not to a greetings or signup branch
 
 3.2 LOGIN FLOW
 
@@ -148,7 +156,7 @@ Note:
 
 3.3 SIGNUP FLOW
 
-[IMPLEMENTED] Signup screen functions
+[PARTIAL] Signup screen functions
 - School ID
 - First name
 - Last name
@@ -157,22 +165,23 @@ Note:
 - Validation
 - Registration request
 
-[IMPLEMENTED] Signup next-step behavior
+[PARTIAL] Signup next-step behavior
 - Successful signup can route to:
   - `AboutScreen`
   - `HomeScreen`
-- Current intended onboarding route appears to favor `AboutScreen`
+- This flow exists in code but is not part of the current reachable unauthenticated path
 
 3.4 POST-SIGNUP / ONBOARDING FLOW
 
-[IMPLEMENTED] About screen role in flow
+[PARTIAL] About screen role in flow
 - Introductory app explanation
 - Encourages user to add a vehicle
 - Allows user to proceed to Home
 
-[IMPLEMENTED] About screen outcomes
+[PARTIAL] About screen outcomes
 - Add vehicle
 - Skip to Home
+- The screen behavior exists, but it is currently downstream of the unreachable signup path
 
 3.5 TERMS ACCEPTANCE FLOW
 

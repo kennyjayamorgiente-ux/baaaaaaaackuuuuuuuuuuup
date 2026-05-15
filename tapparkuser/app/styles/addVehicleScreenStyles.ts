@@ -134,8 +134,17 @@ export const addVehicleScreenStyles = StyleSheet.create({
     paddingTop: getResponsivePadding(15),
     marginTop: getResponsiveSize(5),
   },
+  inputGroup: {
+    marginBottom: getResponsiveMargin(10),
+  },
+  inputLabel: {
+    fontSize: getResponsiveFontSize(13),
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: getResponsiveMargin(6),
+    marginLeft: getResponsiveMargin(4),
+  },
   dropdownContainer: {
-    marginBottom: getResponsiveMargin(8),
     backgroundColor: 'white',
     borderRadius: getResponsiveSize(12),
     elevation: 3,
@@ -193,7 +202,7 @@ export const addVehicleScreenStyles = StyleSheet.create({
     paddingHorizontal: getResponsivePadding(16),
     paddingVertical: getResponsivePadding(12),
     fontSize: getResponsiveFontSize(16),
-    marginBottom: getResponsiveSize(6),
+    marginBottom: getResponsiveSize(2),
     color: '#1F2937',
     minHeight: isSmallScreen ? 40 : 48,
   },

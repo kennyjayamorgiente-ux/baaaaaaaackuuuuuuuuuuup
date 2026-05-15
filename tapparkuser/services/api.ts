@@ -639,6 +639,7 @@ export class ApiService {
           type_id: number;
           account_type_name: string;
           terms_accepted?: boolean;
+          has_seen_about?: boolean;
         };
         token: string;
       };
@@ -753,6 +754,7 @@ export class ApiService {
           type_id: number;
           account_type_name: string;
           terms_accepted?: boolean;
+          has_seen_about?: boolean;
         };
       };
     }>('/auth/profile');
@@ -769,6 +771,15 @@ export class ApiService {
       success: boolean;
       message: string;
     }>('/auth/accept-terms', {
+      method: 'POST',
+    });
+  }
+
+  static async completeAboutOnboarding() {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>('/auth/complete-about', {
       method: 'POST',
     });
   }

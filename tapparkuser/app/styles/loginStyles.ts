@@ -125,6 +125,16 @@ export const loginStyles = StyleSheet.create({
     marginTop: getResponsiveMargin(10),
     paddingBottom: getResponsivePadding(20),
   },
+  inputGroup: {
+    marginBottom: getResponsiveMargin(10),
+  },
+  inputLabel: {
+    fontSize: getResponsiveFontSize(13),
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: getResponsiveMargin(6),
+    marginLeft: getResponsiveMargin(4),
+  },
   inputField: {
     backgroundColor: '#F8F8F8',
     borderWidth: 1,
@@ -133,7 +143,7 @@ export const loginStyles = StyleSheet.create({
     paddingHorizontal: getResponsivePadding(16),
     paddingVertical: getResponsivePadding(16),
     fontSize: getResponsiveFontSize(18),
-    marginBottom: getResponsiveMargin(8),
+    marginBottom: getResponsiveMargin(2),
     color: '#1F2937',
     minHeight: getResponsiveSize(48),
   },
@@ -159,7 +169,7 @@ export const loginStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#800000',
     borderRadius: getResponsiveSize(8),
-    marginBottom: getResponsiveMargin(8),
+    marginBottom: getResponsiveMargin(2),
     minHeight: getResponsiveSize(48),
   },
   passwordFieldWithIcon: {

@@ -128,9 +128,14 @@ const parseDevBypassAccounts = () => {
 
 const findMatchingDevBypassAccount = (identifier, password) => {
   const normalizedIdentifier = normalizeIdentifier(identifier);
+  const normalizedRawInput = String(identifier || '').trim().toLowerCase();
   return parseDevBypassAccounts().find(
     (account) =>
-      account.identifier === normalizedIdentifier && account.password === password
+      (
+        account.identifier === normalizedIdentifier ||
+        String(account.email || '').trim().toLowerCase() === normalizedRawInput
+      ) &&
+      account.password === password
   ) || null;
 };
 
@@ -476,7 +481,15 @@ router.post('/login', loginValidation, async (req, res) => {
                    AND action_type = 'TERMS_ACCEPTED'
                  ) THEN 1
                  ELSE 0
-               END as terms_accepted
+               END as terms_accepted,
+               CASE
+                 WHEN EXISTS (
+                   SELECT 1 FROM user_logs
+                   WHERE user_id = u.user_id
+                     AND action_type = 'ABOUT_VIEWED'
+                 ) THEN 1
+                 ELSE 0
+               END as has_seen_about
         FROM users u
         LEFT JOIN types t ON u.user_type_id = t.type_id
         WHERE REPLACE(REPLACE(COALESCE(u.external_user_id, ''), '-', ''), ' ', '') = ?
@@ -494,7 +507,15 @@ router.post('/login', loginValidation, async (req, res) => {
                    AND action_type = 'TERMS_ACCEPTED'
                  ) THEN 1
                  ELSE 0
-               END as terms_accepted
+               END as terms_accepted,
+               CASE
+                 WHEN EXISTS (
+                   SELECT 1 FROM user_logs
+                   WHERE user_id = u.user_id
+                     AND action_type = 'ABOUT_VIEWED'
+                 ) THEN 1
+                 ELSE 0
+               END as has_seen_about
         FROM users u
         LEFT JOIN types t ON u.user_type_id = t.type_id
         WHERE u.external_source = 'foundationu_mis'
@@ -575,7 +596,15 @@ router.post('/login', loginValidation, async (req, res) => {
                    AND action_type = 'TERMS_ACCEPTED'
                  ) THEN 1
                  ELSE 0
-               END as terms_accepted
+               END as terms_accepted,
+               CASE
+                 WHEN EXISTS (
+                   SELECT 1 FROM user_logs
+                   WHERE user_id = u.user_id
+                     AND action_type = 'ABOUT_VIEWED'
+                 ) THEN 1
+                 ELSE 0
+               END as has_seen_about
         FROM users u
         LEFT JOIN types t ON u.user_type_id = t.type_id
         WHERE u.user_id = ?
@@ -622,7 +651,8 @@ router.post('/login', loginValidation, async (req, res) => {
       type_id: user.user_type_id,
       account_type_name: user.account_type_name,
       profile_image: profileImageUrl,
-      terms_accepted: user.terms_accepted === 1 || user.terms_accepted === true
+      terms_accepted: user.terms_accepted === 1 || user.terms_accepted === true,
+      has_seen_about: user.has_seen_about === 1 || user.has_seen_about === true
     };
 
     // Log user login
@@ -690,7 +720,15 @@ router.get('/profile', authenticateToken, async (req, res) => {
                  AND action_type = 'TERMS_ACCEPTED'
                ) THEN 1
                ELSE 0
-             END as terms_accepted
+             END as terms_accepted,
+             CASE
+               WHEN EXISTS (
+                 SELECT 1 FROM user_logs
+                 WHERE user_id = u.user_id
+                   AND action_type = 'ABOUT_VIEWED'
+               ) THEN 1
+               ELSE 0
+             END as has_seen_about
       FROM users u
       LEFT JOIN types t ON u.user_type_id = t.type_id
       WHERE u.user_id = ?
@@ -726,6 +764,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       account_type_name: user.account_type_name,
       profile_image: profileImageUrl,
       terms_accepted: user.terms_accepted === 1 || user.terms_accepted === true,
+      has_seen_about: user.has_seen_about === 1 || user.has_seen_about === true,
       created_at: user.created_at
     };
 
@@ -766,6 +805,27 @@ router.post('/accept-terms', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to accept terms and conditions'
+    });
+  }
+});
+
+router.post('/complete-about', authenticateToken, async (req, res) => {
+  try {
+    await logUserActivity(
+      req.user.user_id,
+      ActionTypes.ABOUT_VIEWED,
+      'User completed about screen onboarding'
+    );
+
+    res.json({
+      success: true,
+      message: 'About screen onboarding completed successfully'
+    });
+  } catch (error) {
+    console.error('Complete about onboarding error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete about screen onboarding'
     });
   }
 });

@@ -311,21 +311,7 @@ export default function SignupScreen() {
             {
               text: 'OK',
               onPress: async () => {
-                // Check if user has any vehicles
-                try {
-                  const vehiclesResponse = await ApiService.getVehicles();
-                  if (vehiclesResponse.success && vehiclesResponse.data.vehicles.length === 0) {
-                    // No vehicles found, show AboutScreen to encourage adding a vehicle
-                    router.push('/screens/AboutScreen');
-                  } else {
-                    // User has vehicles, go to HomeScreen
-                    router.push('/screens/HomeScreen');
-                  }
-                } catch (error) {
-                  console.error('Error checking vehicles:', error);
-                  // If there's an error checking vehicles, default to AboutScreen for new users
-                  router.push('/screens/AboutScreen');
-                }
+                router.push('/screens/AboutScreen');
               }
             }
           ]

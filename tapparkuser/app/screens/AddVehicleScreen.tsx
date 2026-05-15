@@ -377,195 +377,206 @@ export default function AddVehicleScreen() {
           {/* Input Fields */}
           <View style={addVehicleScreenStyles.inputSection}>
             {/* Vehicle Type Dropdown - FAQ Style */}
-            <TouchableOpacity 
-              style={[
-                addVehicleScreenStyles.dropdownContainer,
-                { backgroundColor: colors.card },
-                errors.vehicleType && addVehicleScreenStyles.errorInput
-              ]}
-              onPress={() => {
-                toggleDropdown();
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollTo({ y: 280, animated: true });
-                }, 100);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[addVehicleScreenStyles.dropdownHeader, { backgroundColor: colors.card }]}>
-                <Text style={[
-                  addVehicleScreenStyles.dropdownText,
-                  { color: colors.text },
-                  !vehicleType && addVehicleScreenStyles.placeholderText,
-                  errors.vehicleType && addVehicleScreenStyles.errorText
-                ]}>
-                  {vehicleType ? VEHICLE_TYPES.find(type => type.value === vehicleType)?.label : "Vehicle Type"}
-                </Text>
-                <Ionicons 
-                  name="chevron-down" 
-                  size={20} 
-                  color={errors.vehicleType ? "#FF3B30" : colors.primary}
-                  style={[
-                    addVehicleScreenStyles.chevronIcon,
-                    { transform: [{ rotate: isDropdownVisible ? '180deg' : '0deg' }] }
-                  ]}
-                />
-              </View>
-              
-              {errors.vehicleType && (
-                <Text style={addVehicleScreenStyles.errorHelperText}>
-                  {errors.vehicleType}
-                </Text>
-              )}
-              
-              {isDropdownVisible && (
-                <View style={[addVehicleScreenStyles.dropdownContent, { backgroundColor: colors.backgroundSecondary, borderTopColor: colors.border }]}>
-                  {VEHICLE_TYPES.map((type) => (
-                    <TouchableOpacity
-                      key={type.value}
-                      style={[
-                        addVehicleScreenStyles.dropdownItem,
-                        { backgroundColor: colors.backgroundSecondary, borderBottomColor: colors.border },
-                        vehicleType === type.value && addVehicleScreenStyles.selectedDropdownItem
-                      ]}
-                      onPress={() => handleVehicleTypeSelect(type.value)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[
-                        addVehicleScreenStyles.dropdownItemText,
-                        { color: colors.text },
-                        vehicleType === type.value && addVehicleScreenStyles.selectedDropdownItemText
-                      ]}>
-                        {type.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+            <View style={addVehicleScreenStyles.inputGroup}>
+              <Text style={[addVehicleScreenStyles.inputLabel, { color: colors.textSecondary }]}>Vehicle Type</Text>
+              <TouchableOpacity 
+                style={[
+                  addVehicleScreenStyles.dropdownContainer,
+                  { backgroundColor: colors.card },
+                  errors.vehicleType && addVehicleScreenStyles.errorInput
+                ]}
+                onPress={() => {
+                  toggleDropdown();
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 280, animated: true });
+                  }, 100);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[addVehicleScreenStyles.dropdownHeader, { backgroundColor: colors.card }]}>
+                  <Text style={[
+                    addVehicleScreenStyles.dropdownText,
+                    { color: colors.text },
+                    !vehicleType && addVehicleScreenStyles.placeholderText,
+                    errors.vehicleType && addVehicleScreenStyles.errorText
+                  ]}>
+                    {vehicleType ? VEHICLE_TYPES.find(type => type.value === vehicleType)?.label : "Select vehicle type"}
+                  </Text>
+                  <Ionicons 
+                    name="chevron-down" 
+                    size={20} 
+                    color={errors.vehicleType ? "#FF3B30" : colors.primary}
+                    style={[
+                      addVehicleScreenStyles.chevronIcon,
+                      { transform: [{ rotate: isDropdownVisible ? '180deg' : '0deg' }] }
+                    ]}
+                  />
                 </View>
+                
+                {errors.vehicleType && (
+                  <Text style={addVehicleScreenStyles.errorHelperText}>
+                    {errors.vehicleType}
+                  </Text>
+                )}
+                
+                {isDropdownVisible && (
+                  <View style={[addVehicleScreenStyles.dropdownContent, { backgroundColor: colors.backgroundSecondary, borderTopColor: colors.border }]}>
+                    {VEHICLE_TYPES.map((type) => (
+                      <TouchableOpacity
+                        key={type.value}
+                        style={[
+                          addVehicleScreenStyles.dropdownItem,
+                          { backgroundColor: colors.backgroundSecondary, borderBottomColor: colors.border },
+                          vehicleType === type.value && addVehicleScreenStyles.selectedDropdownItem
+                        ]}
+                        onPress={() => handleVehicleTypeSelect(type.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          addVehicleScreenStyles.dropdownItemText,
+                          { color: colors.text },
+                          vehicleType === type.value && addVehicleScreenStyles.selectedDropdownItemText
+                        ]}>
+                          {type.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={addVehicleScreenStyles.inputGroup}>
+              <Text style={[addVehicleScreenStyles.inputLabel, { color: colors.textSecondary }]}>Vehicle Color</Text>
+              <TextInput
+                style={[
+                  addVehicleScreenStyles.inputField,
+                  { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text },
+                  errors.vehicleColor && addVehicleScreenStyles.errorInput
+                ]}
+                placeholder="Enter vehicle color"
+                placeholderTextColor={colors.textMuted}
+                selectionColor={colors.primary}
+                value={vehicleColor}
+                onChangeText={(text) => {
+                  setVehicleColor(text);
+                  if (errors.vehicleColor) {
+                    setErrors(prev => ({ ...prev, vehicleColor: '' }));
+                  }
+                }}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 330, animated: true });
+                  }, 100);
+                }}
+                ref={vehicleColorRef}
+              />
+
+              {errors.vehicleColor && (
+                <Text style={addVehicleScreenStyles.errorHelperText}>
+                  {errors.vehicleColor}
+                </Text>
               )}
-            </TouchableOpacity>
+            </View>
 
-            <TextInput
-              style={[
-                addVehicleScreenStyles.inputField,
-                { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text },
-                errors.vehicleColor && addVehicleScreenStyles.errorInput
-              ]}
-              placeholder="Vehicle Color:"
-              placeholderTextColor={colors.textMuted}
-              selectionColor={colors.primary}
-              value={vehicleColor}
-              onChangeText={(text) => {
-                setVehicleColor(text);
-                // Clear error when user starts typing
-                if (errors.vehicleColor) {
-                  setErrors(prev => ({ ...prev, vehicleColor: '' }));
-                }
-              }}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollTo({ y: 330, animated: true });
-                }, 100);
-              }}
-              ref={vehicleColorRef}
-            />
+            <View style={addVehicleScreenStyles.inputGroup}>
+              <Text style={[addVehicleScreenStyles.inputLabel, { color: colors.textSecondary }]}>Plate Number</Text>
+              <TextInput
+                style={[
+                  addVehicleScreenStyles.inputField,
+                  { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text },
+                  errors.plateNumber && addVehicleScreenStyles.errorInput
+                ]}
+                placeholder="Enter plate number"
+                placeholderTextColor={colors.textMuted}
+                selectionColor={colors.primary}
+                value={plateNumber}
+                onChangeText={(text) => {
+                  setPlateNumber(text);
+                  if (errors.plateNumber) {
+                    setErrors(prev => ({ ...prev, plateNumber: '' }));
+                  }
+                }}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 390, animated: true });
+                  }, 100);
+                }}
+                ref={plateNumberRef}
+              />
 
-            {errors.vehicleColor && (
-              <Text style={addVehicleScreenStyles.errorHelperText}>
-                {errors.vehicleColor}
-              </Text>
-            )}
+              {errors.plateNumber && (
+                <Text style={addVehicleScreenStyles.errorHelperText}>
+                  {errors.plateNumber}
+                </Text>
+              )}
+            </View>
 
-            <TextInput
-              style={[
-                addVehicleScreenStyles.inputField,
-                { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text },
-                errors.plateNumber && addVehicleScreenStyles.errorInput
-              ]}
-              placeholder="Plate Number:"
-              placeholderTextColor={colors.textMuted}
-              selectionColor={colors.primary}
-              value={plateNumber}
-              onChangeText={(text) => {
-                setPlateNumber(text);
-                // Clear error when user starts typing
-                if (errors.plateNumber) {
-                  setErrors(prev => ({ ...prev, plateNumber: '' }));
-                }
-              }}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollTo({ y: 390, animated: true });
-                }, 100);
-              }}
-              ref={plateNumberRef}
-            />
+            <View style={addVehicleScreenStyles.inputGroup}>
+              <Text style={[addVehicleScreenStyles.inputLabel, { color: colors.textSecondary }]}>Vehicle Brand</Text>
+              <TextInput
+                style={[
+                  addVehicleScreenStyles.inputField,
+                  { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text },
+                  errors.vehicleBrand && addVehicleScreenStyles.errorInput
+                ]}
+                placeholder="Enter vehicle brand"
+                placeholderTextColor={colors.textMuted}
+                selectionColor={colors.primary}
+                value={vehicleBrand}
+                onChangeText={(text) => {
+                  setVehicleBrand(text);
+                  if (errors.vehicleBrand) {
+                    setErrors(prev => ({ ...prev, vehicleBrand: '' }));
+                  }
+                }}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 450, animated: true });
+                  }, 100);
+                }}
+                ref={vehicleBrandRef}
+              />
 
-            {errors.plateNumber && (
-              <Text style={addVehicleScreenStyles.errorHelperText}>
-                {errors.plateNumber}
-              </Text>
-            )}
+              {errors.vehicleBrand && (
+                <Text style={addVehicleScreenStyles.errorHelperText}>
+                  {errors.vehicleBrand}
+                </Text>
+              )}
+            </View>
 
-            <TextInput
-              style={[
-                addVehicleScreenStyles.inputField,
-                { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text },
-                errors.vehicleBrand && addVehicleScreenStyles.errorInput
-              ]}
-              placeholder="Vehicle Brand:"
-              placeholderTextColor={colors.textMuted}
-              selectionColor={colors.primary}
-              value={vehicleBrand}
-              onChangeText={(text) => {
-                setVehicleBrand(text);
-                // Clear error when user starts typing
-                if (errors.vehicleBrand) {
-                  setErrors(prev => ({ ...prev, vehicleBrand: '' }));
-                }
-              }}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollTo({ y: 450, animated: true });
-                }, 100);
-              }}
-              ref={vehicleBrandRef}
-            />
+            <View style={addVehicleScreenStyles.inputGroup}>
+              <Text style={[addVehicleScreenStyles.inputLabel, { color: colors.textSecondary }]}>Vehicle Model</Text>
+              <TextInput
+                style={[
+                  addVehicleScreenStyles.inputField,
+                  { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text },
+                  errors.vehicleModel && addVehicleScreenStyles.errorInput
+                ]}
+                placeholder="Enter vehicle model"
+                placeholderTextColor={colors.textMuted}
+                selectionColor={colors.primary}
+                value={vehicleModel}
+                onChangeText={(text) => {
+                  setVehicleModel(text);
+                  if (errors.vehicleModel) {
+                    setErrors(prev => ({ ...prev, vehicleModel: '' }));
+                  }
+                }}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 100);
+                }}
+                ref={vehicleModelRef}
+              />
 
-            {errors.vehicleBrand && (
-              <Text style={addVehicleScreenStyles.errorHelperText}>
-                {errors.vehicleBrand}
-              </Text>
-            )}
-
-            <TextInput
-              style={[
-                addVehicleScreenStyles.inputField,
-                { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text },
-                errors.vehicleModel && addVehicleScreenStyles.errorInput
-              ]}
-              placeholder="Vehicle Model:"
-              placeholderTextColor={colors.textMuted}
-              selectionColor={colors.primary}
-              value={vehicleModel}
-              onChangeText={(text) => {
-                setVehicleModel(text);
-                // Clear error when user starts typing
-                if (errors.vehicleModel) {
-                  setErrors(prev => ({ ...prev, vehicleModel: '' }));
-                }
-              }}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 100);
-              }}
-              ref={vehicleModelRef}
-            />
-
-            {errors.vehicleModel && (
-              <Text style={addVehicleScreenStyles.errorHelperText}>
-                {errors.vehicleModel}
-              </Text>
-            )}
+              {errors.vehicleModel && (
+                <Text style={addVehicleScreenStyles.errorHelperText}>
+                  {errors.vehicleModel}
+                </Text>
+              )}
+            </View>
           </View>
 
           {/* Bottom Section - Buttons */}

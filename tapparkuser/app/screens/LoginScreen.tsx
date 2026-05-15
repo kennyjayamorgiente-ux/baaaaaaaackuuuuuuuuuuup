@@ -192,16 +192,22 @@ export default function LoginScreen() {
             {
               text: 'OK',
               onPress: async () => {
+                const accountType = String(result.user?.account_type_name || '').trim().toLowerCase();
+                const typeId = Number(result.user?.type_id);
+
                 // Navigate based on user type
-                if (result.user?.account_type_name === 'Attendant') {
+                if (accountType === 'attendant' || typeId === 2) {
                   console.log('Routing to attendant dashboard');
                   router.replace('/attendant-screen/DashboardScreen' as any);
-                } else if (result.user?.account_type_name === 'Subscriber') {
-                    // For subscribers, always go to HomeScreen
-                  // The HomeScreen will handle any necessary onboarding flows
-                  console.log('Routing subscriber to HomeScreen');
-                  router.replace('/screens/HomeScreen');
-                } else if (result.user?.account_type_name === 'Admin') {
+                } else if (accountType === 'subscriber' || typeId === 1) {
+                  if (result.user.has_seen_about === false || result.user.has_seen_about === undefined) {
+                    console.log('Routing subscriber to AboutScreen for first-login onboarding');
+                    router.replace('/screens/AboutScreen');
+                  } else {
+                    console.log('Routing subscriber to HomeScreen');
+                    router.replace('/screens/HomeScreen');
+                  }
+                } else if (accountType === 'admin' || typeId === 3) {
                   console.log('Routing to admin home');
                   router.replace('/screens/HomeScreen');
                 } else {
@@ -288,60 +294,66 @@ export default function LoginScreen() {
 
           {/* Input Fields */}
           <View style={styles.inputSection}>
-            <TextInput
-              ref={idNumberInputRef}
-              style={[styles.inputField, { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text }]}
-              placeholder="ID Number"
-              placeholderTextColor={colors.textMuted}
-              selectionColor={colors.primary}
-              value={identifier}
-              onChangeText={(text) => {
-                setIdentifier(text);
-                if (identifierError) setIdentifierError(''); // Clear error when user starts typing
-              }}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollTo({ y: 200, animated: true });
-                }, 100);
-              }}
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            {identifierError ? <Text style={styles.errorText}>{identifierError}</Text> : null}
-            
-            <View style={[styles.passwordContainer, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>ID Number</Text>
               <TextInput
-                ref={passwordInputRef}
-                style={[styles.passwordFieldWithIcon, { color: colors.text }]}
-                placeholder="Password"
+                ref={idNumberInputRef}
+                style={[styles.inputField, { backgroundColor: colors.card, borderColor: colors.primary, color: colors.text }]}
+                placeholder="Enter your ID number"
                 placeholderTextColor={colors.textMuted}
                 selectionColor={colors.primary}
-                secureTextEntry={!showPassword}
-                value={password}
+                value={identifier}
                 onChangeText={(text) => {
-                  setPassword(text);
-                  if (generalError) setGeneralError(''); // Clear error when user starts typing
+                  setIdentifier(text);
+                  if (identifierError) setIdentifierError('');
                 }}
                 onFocus={() => {
                   setTimeout(() => {
-                    scrollViewRef.current?.scrollTo({ y: 300, animated: true });
+                    scrollViewRef.current?.scrollTo({ y: 200, animated: true });
                   }, 100);
                 }}
-                autoCapitalize="none"
+                autoCapitalize="characters"
                 autoCorrect={false}
               />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIconButton}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={22}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
+              {identifierError ? <Text style={styles.errorText}>{identifierError}</Text> : null}
             </View>
-            {generalError ? <Text style={styles.errorText}>{generalError}</Text> : null}
+            
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Password</Text>
+              <View style={[styles.passwordContainer, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+                <TextInput
+                  ref={passwordInputRef}
+                  style={[styles.passwordFieldWithIcon, { color: colors.text }]}
+                  placeholder="Enter your password"
+                  placeholderTextColor={colors.textMuted}
+                  selectionColor={colors.primary}
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (generalError) setGeneralError('');
+                  }}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollTo({ y: 300, animated: true });
+                    }, 100);
+                  }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIconButton}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {generalError ? <Text style={styles.errorText}>{generalError}</Text> : null}
+            </View>
 
             <TouchableOpacity
               style={styles.rememberMeRow}
